@@ -1,7 +1,6 @@
 require "checkpointer/version"
-require 'chechpointer/database_copier'
-require 'chechpointer/checkpointer'
+require 'checkpointer/database_copier'
+require 'checkpointer/checkpointer'
 
 module Checkpointer
-  # Your code goes here...
 end

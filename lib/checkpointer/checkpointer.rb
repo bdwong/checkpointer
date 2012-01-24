@@ -1,4 +1,6 @@
 module Checkpointer
+  require 'mysql2'
+  
   class Checkpointer
     def initialize(db_name, db_backup=nil)
       @db_name = db_name
