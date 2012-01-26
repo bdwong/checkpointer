@@ -1,6 +1,6 @@
 module Checkpointer
   module Database
-  	class ActiveRecordAdapter
+  	class ActiveRecordAdapter < Adapter
   	end
   end
 end

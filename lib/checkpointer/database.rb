@@ -4,7 +4,17 @@ require 'checkpointer/database/active_record_adapter'
 
 module Checkpointer
   module Database
-  	def autodetect_database_adapter
-  	end
+    def database_adapters
+      [ActiveRecordAdapter, Mysql2Adapter]
+    end
+
+    # Get the first configured database adapter.
+    def autodetect_database_adapter
+      configured_adapter = database_adapters.find do |adapter|
+        adapter.configured?
+      end
+      raise RuntimeError.new("No configured database adapters") unless configured_adapter
+      configured_adapter
+    end
   end
 end
