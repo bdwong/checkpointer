@@ -134,31 +134,6 @@ module Checkpointer
     end
 
     # Drop all checkpoints at or above the current number, then reduce the current checkpoint number.
-    # def drop(cpname=nil)
-    #   if cpname.nil?
-    #     checkpoints.each do |cp|
-    #       if is_number?(cp) and cp.to_i >= @checkpoint_number
-    #         puts "Dropping checkpoint #{cp}."
-    #         sql_connection.execute("DROP DATABASE #{@db_backup}_#{cp}")
-    #       end
-    #     end
-    #     @checkpoint_number -= 1
-    #     @last_checkpoint = @checkpoint_number
-    #   else
-    #     if not checkpoints.include?(cpname.to_s)
-    #       puts "Checkpoint #{cpname} not found."
-    #       return
-    #     end
-    #     puts "Dropping checkpoint #{cpname}."
-    #     sql_connection.execute("DROP DATABASE #{@db_backup}_#{cpname}")
-    #     if @last_checkpoint == cpname
-    #       @last_checkpoint = @checkpoint_number
-    #     end
-    #   end
-    #   @last_checkpoint
-    # end
-
-    # Drop all checkpoints at or above the current number, then reduce the current checkpoint number.
     def drop(cp=@checkpoint_number)
       if is_number?(cp)
         drop_checkpoint_number(cp)
