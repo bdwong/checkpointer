@@ -2,21 +2,35 @@ module Checkpointer
   require 'mysql2'
   
   class DatabaseCopier
-    
-    def self.sql_connection
-      ActiveRecord::Base.connection
+    include ::Checkpointer::Database
+
+    def self.from_connection(connection)
+      return DatabaseCopier.new(:connection => connection)
     end
 
-    def self.create_database(db)
+    def initialize(options = {})
+      connection = options.delete(:connection)
+      if connection
+        @db_adapter = connection
+      else
+        @db_adapter = autodetect_database_adapter
+      end
+    end
+
+    def sql_connection
+      @db_adapter
+    end
+
+    def create_database(db)
       sql_connection.execute("DROP DATABASE IF EXISTS #{db}")
       sql_connection.execute("CREATE DATABASE #{db} CHARACTER SET utf8 COLLATE utf8_general_ci")
     end
 
-    def self.copy_database(from_db, to_db)
+    def copy_database(from_db, to_db)
       sql_connection.execute("DROP DATABASE IF EXISTS #{to_db}")
       sql_connection.execute("CREATE DATABASE #{to_db} CHARACTER SET utf8 COLLATE utf8_general_ci")
 
-      tables = sql_connection.select_all("SHOW TABLES FROM #{from_db}")
+      tables = sql_connection.execute("SHOW TABLES FROM #{from_db}")
       #the results are an array of hashes, ie:
       # [{"table_from_customerdb1" => "customers"},{"table_from_customerdb1" => "employees},...]
       table_names = tables.map{|h| h.values}.flatten
@@ -24,7 +38,7 @@ module Checkpointer
       copy_tables(table_names, from_db, to_db)
     end
 
-    def self.copy_tables(table_names, from_db, to_db)
+    def copy_tables(table_names, from_db, to_db)
       return if table_names.empty?
       
       # For efficiency, turn off time consuming options.

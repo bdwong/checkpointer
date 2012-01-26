@@ -7,7 +7,7 @@ module Checkpointer
     def initialize(options={})
       @options = options.to_hash
       adapter = autodetect_database_adapter
-      puts "adapter found: #{adapter}"
+      #puts "Adapter found: #{adapter}"
       @db_adapter = adapter.new(options)
       @checkpoint_number=0
       @last_checkpoint=0
@@ -54,8 +54,9 @@ module Checkpointer
         cp = @checkpoint_number
       end
       db_checkpoint = "#{@db_backup}_#{cp}"
-      DatabaseCopier.create_database(db_checkpoint)
-      DatabaseCopier.copy_tables(table_names, @db_name, db_checkpoint)
+      db_copier = DatabaseCopier.from_connection(@db_adapter)
+      db_copier.create_database(db_checkpoint)
+      db_copier.copy_tables(table_names, @db_name, db_checkpoint)
       @last_checkpoint = cp
     end
 
@@ -74,12 +75,13 @@ module Checkpointer
       # puts "difference: #{(changed_tables - checkpoint_tables).inspect}"
 
       # Restore tables not in the checkpoint from backup
-      DatabaseCopier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name)
+      db_copier = DatabaseCopier.from_connection(@db_adapter)
+      db_copier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name)
       
       # Restore tables from checkpoint.
       # This must come last because the tracking table must be restored last,
       # otherwise triggers will update the tracking table incorrectly.
-      DatabaseCopier.copy_tables(checkpoint_tables, db_checkpoint, @db_name)
+      db_copier.copy_tables(checkpoint_tables, db_checkpoint, @db_name)
 
       @checkpoint_number = cp if is_number?(cp)
       @last_checkpoint = cp
@@ -135,12 +137,14 @@ module Checkpointer
     end
 
     def backup
-      DatabaseCopier.copy_database(@db_name, @db_backup)
+      db_copier = DatabaseCopier.from_connection(@db_adapter)
+      db_copier.copy_database(@db_name, @db_backup)
     end
 
     def restore_all
       tables = tables_from(@db_backup)
-      DatabaseCopier.copy_tables(tables, @db_backup, @db_name)
+      db_copier = DatabaseCopier.from_connection(@db_adapter)
+      db_copier.copy_tables(tables, @db_backup, @db_name)
       # Ensure tracking table
       create_tracking_table
     end
@@ -151,7 +155,7 @@ module Checkpointer
     end
 
     def tables_from(db)
-      result = sql_connection.select_all("SHOW TABLES FROM #{db}")
+      result = sql_connection.execute("SHOW TABLES FROM #{db}")
       result = result.map {|r| r.values}.flatten
       # Ensure tracking table is last, if present.
       if result.include?(tracking_table)
@@ -189,8 +193,11 @@ module Checkpointer
           EOF
           begin
             sql_connection.execute(cmd)
-          rescue ActiveRecord::StatementInvalid => e
+          rescue Mysql2::Error => e
             raise unless e.message =~ /multiple triggers/
+          #TODO: convert ActiveRecord::StatementInvalid to checkpoint-specific exception.
+          #rescue ::ActiveRecord::StatementInvalid => e
+          #  raise unless e.message =~ /multiple triggers/
             # Triggers already installed.
           end
         end
