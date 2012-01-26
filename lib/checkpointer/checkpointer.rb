@@ -2,64 +2,23 @@ module Checkpointer
   require 'mysql2'
 
   class Checkpointer
-    def self.active_record_connection?
-      begin
-        return true if not active_record_base.connection.nil?
-      rescue NameError # NameError: uninitialized constant ActiveRecord
-        return false
-      rescue ActiveRecord::ConnectionNotEstablished
-        return false
-      end
-    end
-
-    def self.active_record_base
-      ActiveRecord::Base
-    end
+    include ::Checkpointer::Database
 
     def initialize(options={})
       @options = options.to_hash
-      @connection = nil
+      adapter = autodetect_database_adapter
+      puts "adapter found: #{adapter}"
+      @db_adapter = adapter.new(options)
       @checkpoint_number=0
       @last_checkpoint=0
-      @db_name = options[:database] || current_database
+      @db_name = options[:database] || @db_adapter.current_database
 
       raise ArgumentError.new("No database name specified or no database selected.") if @db_name.nil?
       @db_backup =  options[:backup] || "#{@db_name}_backup"
     end
 
-    def connection_options_specified?
-      [:host, :database, :username, :password, :socket].any? do |option|
-        not @options[option].nil?
-      end
-    end
-
-    def has_required_options?
-      [:database, :username].all? do |key|
-        @options.has_key?(key)
-      end
-    end
-
     def sql_connection
-      # escaped = client.escape("gi'thu\"bbe\0r's")
-      # results = client.query("SELECT * FROM users WHERE group='#{escaped}'")
-      return @connection if @connection
-
-      if connection_options_specified? or not Checkpointer.active_record_connection?
-        raise ArgumentError.new('Missing required option') unless has_required_options?
-        @connection = Mysql2::Client.new(@options)
-      else
-        @connection = Checkpointer.active_record_base.connection.raw_connection
-        if not @connection.kind_of?(Mysql2::Client)
-          raise RuntimeError.new('Checkpointer only works with Mysql2 client on ActiveRecord.')
-       end
-      end
-      @connection
-    end
-
-    def current_database
-      result = sql_connection.query('SELECT DATABASE();')
-      return nil if result.count==0
-      result.to_a[0][0]
+      @db_adapter
     end
 
     def tracking_table

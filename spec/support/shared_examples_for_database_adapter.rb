@@ -8,6 +8,7 @@ shared_examples "a database adapter" do
   end
 
   it 'should respond to common methods' do
+    should respond_to :current_database
     should respond_to :connection
     should respond_to :close_connection
     should respond_to(:escape).with(1).argument

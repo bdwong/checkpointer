@@ -5,7 +5,7 @@
 # end
 
 require 'rspec'
-require 'checkpointer'
+require 'lib/checkpointer'
 require 'mysql2'
 
 # Require shared examples and other support files

@@ -28,6 +28,18 @@ module Checkpointer
       end
 
       def initialize(options={})
+        # TODO
+        # @connection = Checkpointer.active_record_base.connection
+        # if not @connection.raw_connection.kind_of?(Mysql2::Client)
+        #   raise RuntimeError.new('Checkpointer only works with Mysql2 client on ActiveRecord.')
+        # end
+        
+      end
+
+      def current_database
+        result = execute('SELECT DATABASE();')
+        return nil if result.count==0
+        result.to_a[0][0]
       end
 
       def connection
