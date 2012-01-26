@@ -16,12 +16,8 @@ module Checkpointer
       ActiveRecord::Base
     end
 
-    def initialize(options)
-      if options.kind_of?(String)
-        @options = {:database => options}
-      else
-        @options = options.to_hash || {}
-      end
+    def initialize(options={})
+      @options = options.to_hash
       @connection = nil
       @checkpoint_number=0
       @last_checkpoint=0
