@@ -147,7 +147,7 @@ module Checkpointer
 
     private
     def is_number?(value)
-      value.kind_of?(Fixnum) or value.to_i.to_s == value
+      value.kind_of?(Fixnum) or (value.respond_to?(:to_i) and value.to_i.to_s == value)
     end
 
     def tables_from(db)

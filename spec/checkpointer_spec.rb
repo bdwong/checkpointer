@@ -23,7 +23,6 @@ module Checkpointer
   end
 
   describe Checkpointer do
-    #include ::Checkpointer::Database
 
     before(:each) do
       ::Checkpointer::Checkpointer.any_instance.stub(:autodetect_database_adapter).and_return(DummyAdapter)
@@ -34,7 +33,86 @@ module Checkpointer
       it "instantiates" do
         c = Checkpointer.new
         c.should be_kind_of(Checkpointer)
-        c.sql_connection.should be_kind_of(DummyAdapter)
+      end
+    end
+
+    context "instantiated with dummy connection" do
+      before(:each) do
+        @c = Checkpointer.new
+      end
+
+      describe :sql_connection do
+        it "has sql_connection DummyAdapter" do
+          @c.sql_connection.should be_kind_of(DummyAdapter)
+        end
+      end
+
+      describe :tracking_table do
+        subject == "updated_tables"
+      end
+
+      describe :track do
+        pending
+      end
+
+      describe :untrack do
+        pending
+      end
+
+      describe :checkpoint do
+        pending
+      end
+
+      describe :restore do
+        pending
+      end
+
+      describe :pop do
+        pending
+      end
+
+      describe :drop do
+        pending
+      end
+
+      describe :drop_checkpoint_number do
+        pending
+      end
+
+      describe :drop_checkpoint_name do
+        pending
+      end
+
+      describe :checkpoints do
+        pending
+      end
+
+      describe :backup do
+        pending
+      end
+
+      describe :restore_all do
+        pending
+      end
+
+      describe :is_number? do
+        it "should return true for numbers and strings that are numbers" do
+          @c.send(:is_number?, "123").should be_true
+          @c.send(:is_number?, "0").should be_true
+          @c.send(:is_number?, 10).should be_true
+        end
+
+        it "should return false for non-numbers" do
+          @c.send(:is_number?, "abc").should be_false
+          @c.send(:is_number?, [2]).should be_false
+          @c.send(:is_number?, {1 => 1}).should be_false
+          @c.send(:is_number?, :symbol).should be_false
+        end
+
+        it "should return false for strings that contain both alpha and numeric digits" do
+          @c.send(:is_number?, "123abc").should be_false
+          @c.send(:is_number?, "abc123").should be_false
+        end
       end
     end
 
