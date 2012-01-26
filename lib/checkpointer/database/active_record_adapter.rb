@@ -31,15 +31,19 @@ module Checkpointer
       end
 
       def connection
+        ActiveRecord::Base.connection
       end
 
-      def close_connection
+      def close_connection #disconnect
+        connection.disconnect!
       end
 
       def execute(query)
+        connection.execute(query)
       end
 
       def escape(value)
+        ActiveRecord::Base.quote_value(value)
       end
   	end
   end

@@ -9,6 +9,7 @@ end
 
 module ::Checkpointer::Database
   describe ActiveRecordAdapter do
+    it_behaves_like 'a database adapter'
 
     describe 'self.configured?' do
       it 'should return true if both ActiveRecord and its connection are configured.' do
