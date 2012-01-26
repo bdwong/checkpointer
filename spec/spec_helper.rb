@@ -6,6 +6,7 @@
 
 require 'rspec'
 require 'checkpointer'
+require 'mysql2'
 
 RSpec.configure do |config|
   config.color_enabled = true
