@@ -9,7 +9,10 @@ Gem::Specification.new do |s|
   s.email       = ["bdwong.net@gmail.com"]
   s.homepage    = ""
   s.summary     = %q{Checkpoint and restore databases during development and acceptance tests.}
-  s.description = %q{TODO: Write a gem description}
+  s.description = %q{ Use Checkpoint on a MySQL database to save and restore database state during
+                      development and acceptance tests. Uses ActiveRecord directly if available,
+                      or Mysql2 gem if not.
+                    }
 
   s.rubyforge_project = "checkpointer"
 
