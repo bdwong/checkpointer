@@ -68,5 +68,23 @@ module ::Checkpointer::Database
       end
     end
 
+    context "instantiated with fake active_record_base" do
+      def stub_active_record
+        @connection = double('ActiveRecord::ConnectionAdapters::Mysql2Adapter')
+        #@connection.stub
+        @active_record_base = double('ActiveRecord::Base')
+        @active_record_base.stub(:connection).and_return(@connection)
+        described_class.stub(:active_record_base => @active_record_base)
+      end
+
+      it 'should raise Checkpointer::Database::DuplicateTriggerError on duplicate trigger' do
+        stub_active_record
+        c = described_class.new
+        @connection.stub(:execute).and_raise(ActiveRecord::StatementInvalid.new("This version of MySQL doesn't yet support 'multiple triggers with the same action time and event for one table'"))
+        expect { c.execute('Add trigger') }.to raise_error(::Checkpointer::Database::DuplicateTriggerError)
+      end
+    end
+
+
   end
 end

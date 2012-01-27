@@ -24,7 +24,12 @@ module Checkpointer
       end
 
       def execute(query)
-        @connection.query(query)
+        begin
+          @connection.query(query)
+        rescue Mysql2::Error => e
+          raise unless e.message =~ /multiple triggers/
+          raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+        end
       end
 
       def escape(value)

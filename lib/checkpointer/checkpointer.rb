@@ -193,11 +193,7 @@ module Checkpointer
           EOF
           begin
             sql_connection.execute(cmd)
-          rescue Mysql2::Error => e
-            raise unless e.message =~ /multiple triggers/
-          #TODO: convert ActiveRecord::StatementInvalid to checkpoint-specific exception.
-          #rescue ::ActiveRecord::StatementInvalid => e
-          #  raise unless e.message =~ /multiple triggers/
+          rescue ::Checkpointer::Database::DuplicateTriggerError
             # Triggers already installed.
           end
         end

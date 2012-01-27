@@ -5,8 +5,8 @@
 # end
 
 require 'rspec'
-require 'lib/checkpointer'
 require 'mysql2'
+require 'lib/checkpointer'
 
 # Require shared examples and other support files
 Dir["./spec/support/**/*.rb"].each {|f| require f}

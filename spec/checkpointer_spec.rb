@@ -114,6 +114,32 @@ module Checkpointer
           @c.send(:is_number?, "abc123").should be_false
         end
       end
+
+      describe :tables_from do
+        pending
+      end
+
+      describe :changed_tables_from do
+        pending
+      end
+
+      describe :create_tracking_table do
+        pending
+      end
+
+      describe :drop_tracking_table do
+        pending
+      end
+
+      describe :add_triggers do
+        pending
+        it "should handle ::Checkpointer::Database::DuplicateTriggerErrors" do
+        end
+      end
+
+      describe :remove_triggers do
+        pending
+      end
     end
 
     # Test exceptional cases for ActiveRecord

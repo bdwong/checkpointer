@@ -29,11 +29,15 @@ module Checkpointer
 
       def initialize(options={})
         # TODO
-        # @connection = Checkpointer.active_record_base.connection
+        @connection = active_record_base.connection
         # if not @connection.raw_connection.kind_of?(Mysql2::Client)
         #   raise RuntimeError.new('Checkpointer only works with Mysql2 client on ActiveRecord.')
         # end
         
+      end
+
+      def active_record_base
+        ActiveRecordAdapter.active_record_base
       end
 
       def current_database
@@ -43,7 +47,7 @@ module Checkpointer
       end
 
       def connection
-        ActiveRecord::Base.connection
+        @connection
       end
 
       def close_connection #disconnect
@@ -51,11 +55,16 @@ module Checkpointer
       end
 
       def execute(query)
-        connection.execute(query)
+        begin
+          connection.execute(query)
+        rescue ::ActiveRecord::StatementInvalid => e
+          raise unless e.message =~ /multiple triggers/
+          raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+        end
       end
 
       def escape(value)
-        ActiveRecord::Base.quote_value(value)
+        active_record_base.quote_value(value)
       end
   	end
   end
