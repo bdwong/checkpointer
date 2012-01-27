@@ -1,6 +1,6 @@
 module Checkpointer
   module Database
-  	class Adapter
+    class Adapter
       def self.configured?
         false
       end
@@ -26,20 +26,6 @@ module Checkpointer
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
       end
-
-      #TODO
-      # def connection_options_specified?
-      #   [:host, :database, :username, :password, :socket].any? do |option|
-      #     not @options[option].nil?
-      #   end
-      # end
-
-      # def has_required_options?
-      #   [:database, :username].all? do |key|
-      #     @options.has_key?(key)
-      #   end
-      # end
-
-  	end
+    end
   end
 end
