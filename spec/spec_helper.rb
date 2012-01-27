@@ -6,6 +6,7 @@
 
 require 'rspec'
 require 'mysql2'
+require 'active_record'
 require 'lib/checkpointer'
 
 # Require shared examples and other support files
