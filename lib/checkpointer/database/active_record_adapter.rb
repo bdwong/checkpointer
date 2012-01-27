@@ -29,7 +29,12 @@ module Checkpointer
 
       def initialize(options={})
         # TODO
-        @connection = active_record_base.connection
+        begin
+          @connection = active_record_base.connection
+        rescue ActiveRecord::ConnectionNotEstablished => e
+          puts "Warning: #{e.message}"
+          @connection = nil
+        end
         # if not @connection.raw_connection.kind_of?(Mysql2::Client)
         #   raise RuntimeError.new('Checkpointer only works with Mysql2 client on ActiveRecord.')
         # end
