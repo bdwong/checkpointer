@@ -66,6 +66,12 @@ module Checkpointer
       def escape(value)
         active_record_base.quote_value(value)
       end
+
+      # Normalize result of single-column queries into an array.
+      def normalize_result(result)
+        result.to_a.flatten
+      end
+
   	end
   end
 end

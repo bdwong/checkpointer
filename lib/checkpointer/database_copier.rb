@@ -33,7 +33,7 @@ module Checkpointer
       tables = sql_connection.execute("SHOW TABLES FROM #{from_db}")
       #the results are an array of hashes, ie:
       # [{"table_from_customerdb1" => "customers"},{"table_from_customerdb1" => "employees},...]
-      table_names = tables.map{|h| h.values}.flatten
+      table_names = @db_adapter.normalize_result(tables)
 
       copy_tables(table_names, from_db, to_db)
     end

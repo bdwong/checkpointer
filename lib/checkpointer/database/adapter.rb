@@ -23,6 +23,10 @@ module Checkpointer
       def escape(value)
       end
 
+      # Normalize result of single-column queries into an array.
+      def normalize_result(result)
+      end
+
       #TODO
       # def connection_options_specified?
       #   [:host, :database, :username, :password, :socket].any? do |option|

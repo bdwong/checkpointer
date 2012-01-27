@@ -15,6 +15,7 @@ shared_examples "a configured database adapter" do
     should respond_to :close_connection
     should respond_to(:escape).with(1).argument
     should respond_to(:execute).with(1).argument
+    should respond_to(:normalize_result).with(1).argument
   end
 end
 

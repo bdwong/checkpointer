@@ -133,7 +133,7 @@ module Checkpointer
     def checkpoints
       result = sql_connection.execute("SHOW DATABASES LIKE '#{@db_backup.gsub("_", "\\_")}\\_%'")
       prefix_length = @db_backup.length+1
-      result.to_a.flatten.map {|db| db[prefix_length..-1] }
+      sql_connection.normalize_result(result).map {|db| db[prefix_length..-1] }
     end
 
     def backup
@@ -156,7 +156,7 @@ module Checkpointer
 
     def tables_from(db)
       result = sql_connection.execute("SHOW TABLES FROM #{db}")
-      result = result.map {|r| r.values}.flatten
+      result = sql_connection.normalize_result(result)
       # Ensure tracking table is last, if present.
       if result.include?(tracking_table)
         result = (result-[tracking_table]) << tracking_table
@@ -167,7 +167,7 @@ module Checkpointer
     # Select table names from tracking table
     def changed_tables_from(db)
       result = sql_connection.execute("SELECT name FROM #{db}.#{tracking_table}")
-      result.to_a.flatten << tracking_table
+      sql_connection.normalize_result(result) << tracking_table
     end
 
     def create_tracking_table

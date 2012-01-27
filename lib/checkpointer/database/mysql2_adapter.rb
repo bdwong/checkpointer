@@ -36,6 +36,11 @@ module Checkpointer
         @connection.escape(value)
       end
 
+      # Normalize result of single-column queries into an array.
+      def normalize_result(result)
+        result.map{|h| h.values}.flatten
+      end
+
       # TODO
       # if connection_options_specified? 
       #   raise ArgumentError.new('Missing required option') unless has_required_options?
