@@ -1,4 +1,6 @@
-shared_examples "a database adapter" do
+
+# A configured database adapter can be instantiated with no parameters.
+shared_examples "a configured database adapter" do
   it 'should respond to configured?' do
     described_class.should respond_to :configured?
   end
@@ -13,5 +15,12 @@ shared_examples "a database adapter" do
     should respond_to :close_connection
     should respond_to(:escape).with(1).argument
     should respond_to(:execute).with(1).argument
+  end
+end
+
+# An unconfigured database adapter can be instantiated with additional parameters.
+shared_examples "an unconfigured database adapter" do
+  it 'should respond to configured?' do
+    described_class.should_not be_configured
   end
 end

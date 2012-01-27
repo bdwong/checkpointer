@@ -14,13 +14,19 @@ end
 module ::Checkpointer::Database
   
   describe ActiveRecordAdapter do
-    it_behaves_like 'a database adapter'
+    it_behaves_like 'an unconfigured database adapter'
 
     describe 'self.configured?' do
-      it 'should return true if both ActiveRecord and its connection are configured.' do
-        ActiveRecord::Base.stub(:connection).and_return(true)
+      context "ActiveRecord defined and connection configured" do
+        before (:each) do
+          ActiveRecord::Base.stub(:connection).and_return(true)
+        end
 
-        described_class.should be_configured
+        it_behaves_like 'a configured database adapter'
+
+        it 'should return true if both ActiveRecord and its connection are configured.' do
+          described_class.should be_configured
+        end
       end
 
       context "ActiveRecord not defined" do
