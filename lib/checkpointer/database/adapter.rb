@@ -20,7 +20,16 @@ module Checkpointer
       def execute(query)
       end
 
+      # Escape a generic expression. No quotes added.
       def escape(value)
+      end
+
+      # Properly escape and quote an identifier such as database, table or column name.
+      def identifier(value)
+      end
+
+      # Properly escape and quote a string literal.
+      def literal(value)
       end
 
       # Normalize result of single-column queries into an array.

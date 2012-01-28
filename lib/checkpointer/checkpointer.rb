@@ -108,7 +108,8 @@ module Checkpointer
       checkpoints.each do |cp|
         if is_number?(cp) and cp.to_i >= @checkpoint_number
           puts "Dropping checkpoint #{cp}."
-          sql_connection.execute("DROP DATABASE #{@db_backup}_#{cp}")
+          db = sql_connection.identifier("#{@db_backup}_#{cp}")
+          sql_connection.execute("DROP DATABASE #{db}")
         end
       end
       @checkpoint_number -= 1 unless @checkpoint_number == 0
@@ -121,7 +122,8 @@ module Checkpointer
         return
       end
       puts "Dropping checkpoint #{cpname}."
-      sql_connection.execute("DROP DATABASE #{@db_backup}_#{cpname}")
+      db = sql_connection.identifier("#{@db_backup}_#{cpname}")
+      sql_connection.execute("DROP DATABASE #{db}")
       if @last_checkpoint == cpname
         @last_checkpoint = @checkpoint_number
       end
@@ -131,7 +133,9 @@ module Checkpointer
 
     # List checkpoints found by the database engine.
     def checkpoints
-      result = sql_connection.execute("SHOW DATABASES LIKE '#{@db_backup.gsub("_", "\\_")}\\_%'")
+      db_pattern = "#{sql_connection.escape(@db_backup)}".gsub("_", "\\_").gsub("%", "\\%")
+      # TODO: this should be quoted properly.
+      result = sql_connection.execute("SHOW DATABASES LIKE '#{db_pattern}\\_%'")
       prefix_length = @db_backup.length+1
       sql_connection.normalize_result(result).map {|db| db[prefix_length..-1] }
     end
@@ -155,7 +159,7 @@ module Checkpointer
     end
 
     def tables_from(db)
-      result = sql_connection.execute("SHOW TABLES FROM #{db}")
+      result = sql_connection.execute("SHOW TABLES FROM #{sql_connection.identifier(db)}")
       result = sql_connection.normalize_result(result)
       # Ensure tracking table is last, if present.
       if result.include?(tracking_table)
@@ -166,30 +170,42 @@ module Checkpointer
 
     # Select table names from tracking table
     def changed_tables_from(db)
-      result = sql_connection.execute("SELECT name FROM #{db}.#{tracking_table}")
+      result = sql_connection.execute("SELECT name FROM #{sql_connection.identifier(db)}.#{sql_connection.identifier(tracking_table)}")
       sql_connection.normalize_result(result) << tracking_table
     end
 
     def create_tracking_table
-      sql_connection.execute("CREATE TABLE IF NOT EXISTS #{@db_name}.#{tracking_table}(name char(64), PRIMARY KEY (name));")
-      #sql_connection.execute("CREATE TABLE IF NOT EXISTS #{@db_name}.#{tracking_table}(name char(64), PRIMARY KEY (name)) ENGINE = MEMORY;")
+      db = sql_connection.identifier(@db_name)
+      tbl = sql_connection.identifier(tracking_table)
+      sql_connection.execute("CREATE TABLE IF NOT EXISTS #{db}.#{tbl}(name char(64), PRIMARY KEY (name));")
+      #sql_connection.execute("CREATE TABLE IF NOT EXISTS #{db}.#{tbl}(name char(64), PRIMARY KEY (name)) ENGINE = MEMORY;")
     end
 
     def drop_tracking_table
-      sql_connection.execute("DROP TABLE IF EXISTS #{@db_name}.#{tracking_table};")
+      db = sql_connection.identifier(@db_name)
+      tbl = sql_connection.identifier(tracking_table)
+      sql_connection.execute("DROP TABLE IF EXISTS #{db}.#{tbl};")
     end
 
     # Add triggers to all tables except tracking table
     def add_triggers
       puts "Adding triggers, this could take a while..."
+
+      # Init repeated variables outside the loop
+      db = sql_connection.identifier(@db_name)
+      track_tbl = sql_connection.identifier(tracking_table)
+
       tables = tables_from(@db_name)
       tables.reject{|r| r==tracking_table}.each do |t|
+        tbl_value = sql_connection.literal(t)
+        tbl_identifier = sql_connection.identifier(t)
         print "t"
         ["insert", "update", "delete"].each do |operation|
+          trigger_name = sql_connection.identifier("#{t}_#{operation}")
           cmd = <<-EOF
-             CREATE TRIGGER #{@db_name}.#{t}_#{operation} AFTER #{operation} \
-              ON #{t} FOR EACH ROW \
-              INSERT IGNORE INTO #{@db_name}.#{tracking_table} VALUE ("#{t}");
+             CREATE TRIGGER #{db}.#{trigger_name} AFTER #{operation} \
+              ON #{tbl_identifier} FOR EACH ROW \
+              INSERT IGNORE INTO #{db}.#{track_tbl} VALUE (#{tbl_value});
           EOF
           begin
             sql_connection.execute(cmd)
@@ -204,11 +220,16 @@ module Checkpointer
       # Remove triggers from all tables except tracking table
     def remove_triggers
       puts "Removing triggers, this could take a while..."
+
+      # Init repeated variables outside the loop
+      db = sql_connection.identifier(@db_name)
+
       tables = tables_from(@db_name)
       tables.reject{|r| r==tracking_table}.each do |t|
         print "u"
         ["insert", "update", "delete"].each do |operation|
-          cmd = "DROP TRIGGER IF EXISTS #{@db_name}.#{t}_#{operation};"
+          trigger_name = sql_connection.identifier("#{t}_#{operation}")
+          cmd = "DROP TRIGGER IF EXISTS #{db}.#{trigger_name};"
           sql_connection.execute(cmd)
         end
       end

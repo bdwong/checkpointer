@@ -63,9 +63,20 @@ module Checkpointer
         end
       end
 
+      # Escape a generic expression. No quotes added.
       def escape(value)
-        active_record_base.quote_value(value)
+        connection.quote_string(value)
       end
+
+      # Properly escape and quote an identifier such as database, table or column name.
+      def identifier(value)
+        connection.quote_table_name(value)
+      end
+
+      # Properly escape and quote a string literal.
+      def literal(value)
+        connection.quote(value)
+      end      
 
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
