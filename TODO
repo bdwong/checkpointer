@@ -1,0 +1,2 @@
+TOOD:
+- Try "SHOW CREATE TABLE tablename" to compare tables for sameness. It may be faster than unilaterally dropping and creating tables.
