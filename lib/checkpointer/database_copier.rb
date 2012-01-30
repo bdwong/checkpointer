@@ -13,7 +13,7 @@ module Checkpointer
       if connection
         @db_adapter = connection
       else
-        @db_adapter = autodetect_database_adapter
+        @db_adapter = autodetect_database_adapter.new(options)
       end
     end
 
