@@ -47,6 +47,12 @@ module Checkpointer
         "'#{escape(value)}'"
       end
 
+      # List tables from a database
+      def tables_from(db=current_database)
+        result = execute("SHOW TABLES FROM #{identifier(db)}")
+        normalize_result(result)
+      end
+
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
         result.map{|h| h.values}.flatten

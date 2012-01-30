@@ -32,6 +32,10 @@ module Checkpointer
       def literal(value)
       end
 
+      # List tables from a database
+      def tables_from(db=current_database)
+      end
+
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
       end

@@ -55,7 +55,7 @@ module Checkpointer
       end
       db_checkpoint = "#{@db_backup}_#{cp}"
       db_copier = DatabaseCopier.from_connection(@db_adapter)
-      db_copier.create_database(db_checkpoint)
+      db_copier.create_database_for_copy(@db_name, db_checkpoint)
       db_copier.copy_tables(table_names, @db_name, db_checkpoint)
       @last_checkpoint = cp
     end
@@ -159,8 +159,7 @@ module Checkpointer
     end
 
     def tables_from(db)
-      result = sql_connection.execute("SHOW TABLES FROM #{sql_connection.identifier(db)}")
-      result = sql_connection.normalize_result(result)
+      result = sql_connection.tables_from(db)
       # Ensure tracking table is last, if present.
       if result.include?(tracking_table)
         result = (result-[tracking_table]) << tracking_table

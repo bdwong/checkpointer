@@ -1,2 +1,5 @@
 TOOD:
-- Try "SHOW CREATE TABLE tablename" to compare tables for sameness. It may be faster than unilaterally dropping and creating tables.
+- Specs that expect the correct sql query strings on execute()
+
+- Rescue unknown database:
+Mysql2::Error: Unknown database 'sageonepayroll_development_backup_x'
