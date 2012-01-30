@@ -12,6 +12,7 @@ Why Checkpointer?
 Features
 --------
 
+* Only saves tables that have changed.
 * Works in the rails console with ActiveRecord or in the irb console with Mysql2.
 * Multiple checkpoints on a stack
 * Named checkpoints
@@ -22,7 +23,8 @@ Drawbacks
 
 * Runs with Mysql2 or ActiveRecord on Mysql2 only.
 * Uses triggers to detect database changes. Any database with triggers can't use Checkpointer (yet).
-* Becase of the triggers, initial setup time is slow.
+* Becase of triggers, initial setup time is slow.
+* Initial backup is also slow, however subsequent backups are much faster.
 
 Alternatives
 ------------
@@ -36,9 +38,10 @@ you should consider Checkpointer.
 How to use
 ----------
 
+```ruby
     require 'checkpointer'
     #=> true
-    c = Checkpointer::Checkpointer.new(:database=>'SageOnePayroll_development', :username=>'root', :password=>'')
+    c = Checkpointer::Checkpointer.new(:database=>'MyApplication_development', :username=>'root', :password=>'')
     #=> <Checkpointer::Checkpointer>
     c.track
     #=> nil
@@ -59,11 +62,12 @@ How to use
     #=> 2
     c.restore "special"		# Restore named checkpoint
     #=> "special"
-    c.pop 					# Restore checkpoint on the stack and pop it off
+    c.pop 					# Restore checkpoint 2 from the stack and remove it
     #=> 1
 
     c.drop 					# Delete checkpoint off the top of the stack
     #=> 0
     c.restore_all 			# Restore all tables if you have problems.
     #=> nil
-    c.untrack 				# Stop tracking the database
+    c.untrack 				# Stop tracking the database (but why?)
+```
