@@ -1,5 +1,7 @@
 TOOD:
 - Specs that expect the correct sql query strings on execute()
+- Cucumber tests on real databases
+- Ensure triggers when a table is dropped and created.
 
 - Rescue unknown database:
-Mysql2::Error: Unknown database 'sageonepayroll_development_backup_x'
+Mysql2::Error: Unknown database 'database_backup_x'
