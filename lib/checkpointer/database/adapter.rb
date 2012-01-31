@@ -36,6 +36,10 @@ module Checkpointer
       def tables_from(db=current_database)
       end
 
+      # Get the create statement to create a given table.
+      def show_create_table(db, table)
+      end
+
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
       end

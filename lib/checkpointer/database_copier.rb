@@ -46,6 +46,28 @@ module Checkpointer
       copy_tables(tables, from_db, to_db)
     end
 
+    def show_create_table_without_increment(db, table)
+      create_sql = sql_connection.show_create_table(db, table)
+      if not create_sql.nil?
+        matches = create_sql.match(/\sAUTO_INCREMENT=([0-9]+)/)
+        if matches.nil?
+          auto_increment = 0
+        else
+          auto_increment = matches[1]
+        end
+        create_sql.gsub!(/\s+AUTO_INCREMENT=[0-9]+\s*/," ") # Remove auto-increment
+        return [create_sql, auto_increment]
+      else
+        return [nil, 0]
+      end
+    end
+
+    # Copy tables table_names from from_db to to_db.
+    #
+    # If a block is present, it is executed after each table is prepared but before
+    # it is populated with data, with |tbl, op|, where:
+    # * tbl is the blank table
+    # * op is the operation used to create the table, one of :create, :truncate, :drop_and_create
     def copy_tables(table_names, from_db, to_db)
       return if table_names.empty?
       
@@ -61,32 +83,32 @@ module Checkpointer
         print "."
         # Think about whether we should drop/create/re-add triggers, or just truncate.
         tbl = sql_connection.identifier(name)
-        begin
-          to_create = sql_connection.execute("SHOW CREATE TABLE #{to_escaped}.#{tbl}")
-          to_create = to_create.first["Create Table"]
-          matches = to_create.match(/AUTO_INCREMENT=([0-9]+)/)
-          to_auto_increment = matches[1] if not matches.nil?
-          to_create.gsub!(/AUTO_INCREMENT=[0-9]+/,"") # Remove auto-increment
-          from_create = sql_connection.execute("SHOW CREATE TABLE #{from_escaped}.#{tbl}")
-          from_create = from_create.first["Create Table"]
-          matches = from_create.match(/AUTO_INCREMENT=([0-9]+)/)
-          from_auto_increment = matches[1] if not matches.nil?
-          from_create.gsub!(/AUTO_INCREMENT=[0-9]+/,"") # Remove auto-increment
 
-          if from_create != to_create
-            print "D"
-            sql_connection.execute("DROP TABLE #{to_escaped}.#{tbl}")
-          end
-        rescue Mysql2::Error => e
-          raise unless e.message =~ /^Table.*doesn't exist$/
-          # Table does not exist
+        to_create, to_autoincr = show_create_table_without_increment(to_db, name)
+        from_create, from_autoincr = show_create_table_without_increment(from_db, name)
+
+        if to_create.nil?
+          # table doesn't exist, create it.
+          op = :create
+          sql_connection.execute("CREATE TABLE IF NOT EXISTS #{to_escaped}.#{tbl} LIKE #{from_escaped}.#{tbl}")
+        elsif from_create == to_create
+          # table is the same, truncate it.
+          op = :truncate
+          sql_connection.execute("TRUNCATE TABLE #{to_escaped}.#{tbl}")
+        else
+          # table is different, drop and create.
+          op = :drop_and_create
+          sql_connection.execute("DROP TABLE #{to_escaped}.#{tbl}")
+          sql_connection.execute("CREATE TABLE IF NOT EXISTS #{to_escaped}.#{tbl} LIKE #{from_escaped}.#{tbl}")
         end
 
-        sql_connection.execute("CREATE TABLE IF NOT EXISTS #{to_escaped}.#{tbl} LIKE #{from_escaped}.#{tbl}")
-        sql_connection.execute("TRUNCATE TABLE #{to_escaped}.#{tbl}")
+        if block_given?
+          yield tbl, op
+        end
+
         sql_connection.execute("INSERT INTO #{to_escaped}.#{tbl} SELECT * FROM #{from_escaped}.#{tbl}")
         #
-        # if from_create == to_create and from_auto_increment != to_auto_increment
+        # if from_create == to_create and from_autoincr != to_autoincr
         #   puts "Warning: set auto_increment not implemented yet."
             # For many purposes it won't matter because TRUNCATE TABLE
             # will reset auto_increment (see docs for TRUNCATE TABLE).

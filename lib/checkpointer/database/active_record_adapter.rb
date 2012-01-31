@@ -84,6 +84,18 @@ module Checkpointer
         normalize_result(result)
       end
 
+      # Get the create statement to create a given table.
+      # Return nil if the table doesn't exist.
+      def show_create_table(db, table)
+        begin
+          to_create = connection.execute("SHOW CREATE TABLE #{identifier(db)}.#{identifier(table)}")
+          to_create = to_create.first[1] # ActiveRecord
+        rescue ActiveRecord::StatementInvalid => e
+          raise unless e.message =~ /Table.*doesn't exist/
+          return nil
+        end
+      end
+      
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
         result.to_a.flatten

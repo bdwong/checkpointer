@@ -17,6 +17,8 @@ shared_examples "a configured database adapter" do
     should respond_to(:identifier).with(1).argument
     should respond_to(:literal).with(1).argument
     should respond_to(:execute).with(1).argument
+    should respond_to(:tables_from).with(1).argument
+    should respond_to(:show_create_table).with(2).arguments
     should respond_to(:normalize_result).with(1).argument
   end
 end

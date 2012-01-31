@@ -76,12 +76,16 @@ module Checkpointer
 
       # Restore tables not in the checkpoint from backup
       db_copier = DatabaseCopier.from_connection(@db_adapter)
-      db_copier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name)
+      db_copier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name) do |tbl, op|
+        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+      end
       
       # Restore tables from checkpoint.
       # This must come last because the tracking table must be restored last,
       # otherwise triggers will update the tracking table incorrectly.
-      db_copier.copy_tables(checkpoint_tables, db_checkpoint, @db_name)
+      db_copier.copy_tables(checkpoint_tables, db_checkpoint, @db_name) do |tbl, op|
+        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+      end
 
       @checkpoint_number = cp if is_number?(cp)
       @last_checkpoint = cp
@@ -148,7 +152,9 @@ module Checkpointer
     def restore_all
       tables = tables_from(@db_backup)
       db_copier = DatabaseCopier.from_connection(@db_adapter)
-      db_copier.copy_tables(tables, @db_backup, @db_name)
+      db_copier.copy_tables(tables, @db_backup, @db_name) do |tbl, op|
+        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+      end
       # Ensure tracking table
       create_tracking_table
     end
@@ -189,31 +195,35 @@ module Checkpointer
     # Add triggers to all tables except tracking table
     def add_triggers
       puts "Adding triggers, this could take a while..."
-
-      # Init repeated variables outside the loop
-      db = sql_connection.identifier(@db_name)
-      track_tbl = sql_connection.identifier(tracking_table)
-
       tables = tables_from(@db_name)
       tables.reject{|r| r==tracking_table}.each do |t|
-        tbl_value = sql_connection.literal(t)
-        tbl_identifier = sql_connection.identifier(t)
-        print "t"
-        ["insert", "update", "delete"].each do |operation|
-          trigger_name = sql_connection.identifier("#{t}_#{operation}")
-          cmd = <<-EOF
-             CREATE TRIGGER #{db}.#{trigger_name} AFTER #{operation} \
-              ON #{tbl_identifier} FOR EACH ROW \
-              INSERT IGNORE INTO #{db}.#{track_tbl} VALUE (#{tbl_value});
-          EOF
-          begin
-            sql_connection.execute(cmd)
-          rescue ::Checkpointer::Database::DuplicateTriggerError
-            # Triggers already installed.
-          end
-        end
+        add_triggers_to_table(@db_name, t)
       end
       puts "Triggers added."
+    end
+
+    # Add triggers to an individual table.
+    # db_name: unescaped database name
+    # table: unescaped table name
+    def add_triggers_to_table(db_name, table)
+      db = sql_connection.identifier(db_name)
+      tbl_value = sql_connection.literal(table)
+      tbl_identifier = sql_connection.identifier(table)
+      track_tbl = sql_connection.identifier(tracking_table)
+      print "t"
+      ["insert", "update", "delete"].each do |operation|
+        trigger_name = sql_connection.identifier("#{table}_#{operation}")
+        cmd = <<-EOF
+          CREATE TRIGGER #{db}.#{trigger_name} AFTER #{operation} \
+            ON #{tbl_identifier} FOR EACH ROW \
+            INSERT IGNORE INTO #{db}.#{track_tbl} VALUE (#{tbl_value});
+        EOF
+        begin
+          sql_connection.execute(cmd)
+        rescue ::Checkpointer::Database::DuplicateTriggerError
+          # Triggers already installed.
+        end
+      end
     end
 
       # Remove triggers from all tables except tracking table

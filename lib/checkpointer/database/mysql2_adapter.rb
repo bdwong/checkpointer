@@ -53,6 +53,18 @@ module Checkpointer
         normalize_result(result)
       end
 
+      # Get the create statement to create a given table.
+      # Return nil if the table doesn't exist.
+      def show_create_table(db, table)
+        begin
+          create_sql = @connection.query("SHOW CREATE TABLE #{identifier(db)}.#{identifier(table)}")
+          create_sql.first["Create Table"]
+        rescue Mysql2::Error => e
+          raise unless e.message =~ /^Table.*doesn't exist$/
+          return nil
+        end
+      end
+
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
         result.map{|h| h.values}.flatten
