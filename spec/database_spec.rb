@@ -17,7 +17,6 @@ describe :autodetect_database_adapter do
     expect { @instance.autodetect_database_adapter }.to raise_error(RuntimeError)
   end
 
-  context 'returning the first configured database adapter '
   it 'should return the first adapter if it is configured' do
     @adapter1.should_receive(:configured?).and_return(true)
     @instance.autodetect_database_adapter #.should == @adapter1
