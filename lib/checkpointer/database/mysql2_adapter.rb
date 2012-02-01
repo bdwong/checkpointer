@@ -12,7 +12,7 @@ module Checkpointer
       def current_database
         result = execute('SELECT DATABASE();')
         return nil if result.count==0
-        result.to_a[0][0]
+        result.to_a[0].values[0]
       end
 
       def connection
@@ -39,7 +39,7 @@ module Checkpointer
 
       # Properly escape and quote an identifier such as database, table or column name.
       def identifier(value)
-        "\`#{value.gsub('`', '\`').gsub('\\', '\\\\')}\`"
+        "\`#{value.gsub('\\', '\\\\\\\\').gsub('`', '\\\\`')}\`"
       end
 
       # Properly escape and quote a string literal.
