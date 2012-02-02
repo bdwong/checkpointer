@@ -69,6 +69,17 @@ module Checkpointer
       def normalize_result(result)
         result.map{|h| h.values}.flatten
       end
+
+      # Return a column of values from a query result as an array
+      def column_values(result, column=0)
+        if column.kind_of?(Fixnum)
+          column = result.fields[column]
+          return nil if column.nil?
+        else
+          return nil unless result.fields.include?(column)
+        end
+        result.map{|h| h[column]}.flatten
+      end
     end
   end
 end

@@ -103,8 +103,10 @@ module ::Checkpointer::Database
 
       describe :tables_from do
         it 'should return the list tables in a database' do
+          @result = [{"Tables_in_mydb"=>"first_table"}, {"Tables_in_mydb"=>"second_table"}]
+          @result.stub(:fields).and_return(["Tables_in_mydb"])
           Mysql2::Client.any_instance.should_receive(:query).with('SHOW TABLES FROM `mydb`').
-            and_return([{"Tables_in_mydb"=>"first_table"}, {"Tables_in_mydb"=>"second_table"}])
+            and_return(@result)
  
           @c.tables_from("mydb").should == ["first_table", "second_table"]
         end
@@ -137,11 +139,57 @@ module ::Checkpointer::Database
       end
 
       describe :normalize_result do
+        it 'should normalize the result into a single array' do
+          @result = [{"column_1"=>"Column 1 Value 1"}, {"column_1"=>"Column 1 Value 2"}]
+          @result.stub(:fields).and_return(["column_1"])
+          @c.normalize_result(@result).should ==
+            ["Column 1 Value 1", "Column 1 Value 2"]
+        end
       end
-      # # Normalize result of single-column queries into an array.
-      # def normalize_result(result)
-      #   result.map{|h| h.values}.flatten
-      # end    
+
+      describe :column_values do
+        before(:each) do
+          @result = [
+            {"column_1"=>"Column 1 Value 1", "column_2"=>"Column 2 Value 1"},
+            {"column_1"=>"Column 1 Value 2", "column_2"=>"Column 2 Value 2"}
+          ]
+          @result.stub(:fields).and_return(["column_1", "column_2"])
+        end
+
+        it 'should get the first result column into a single array' do
+          @c.column_values(@result, 0).should ==
+            ["Column 1 Value 1", "Column 1 Value 2"]
+        end
+
+        it 'should return the first result column by default' do
+          @c.column_values(@result).should ==
+            ["Column 1 Value 1", "Column 1 Value 2"]
+        end
+
+        it 'should get the second result column into a single array' do
+          @c.column_values(@result, 1).should ==
+            ["Column 2 Value 1", "Column 2 Value 2"]
+        end
+
+        it 'should get the first result column by name' do
+          @c.column_values(@result, "column_1").should ==
+            ["Column 1 Value 1", "Column 1 Value 2"]
+        end
+
+        it 'should get the second result column by name' do
+          @c.column_values(@result, "column_2").should ==
+            ["Column 2 Value 1", "Column 2 Value 2"]
+        end
+
+        it 'should return nil if named column is not found' do
+          @c.column_values(@result, "column_x").should be_nil
+        end
+
+        it 'should return nil if column does not exist' do
+          @c.column_values(@result, 99).should be_nil
+        end
+
+      end
     end
   end
 end
