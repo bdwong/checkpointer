@@ -1,6 +1,11 @@
 Checkpointer
 ============
 
+Installation
+------------
+
+    gem install checkpointer
+
 Why Checkpointer?
 -----------------
 
@@ -18,11 +23,11 @@ Features
 * Named checkpoints
 * Restore to any checkpoint at any time.
 
-Drawbacks
+Limitations
 ---------
 
 * Runs with Mysql2 or ActiveRecord on Mysql2 only.
-* Uses triggers to detect database changes. Any database with triggers can't use Checkpointer (yet).
+* Uses triggers to detect database changes. Any database with existing triggers can't use Checkpointer (yet).
 * Becase of triggers, initial setup time is slow.
 * Initial backup is also slow, however subsequent backups are much faster.
 
@@ -32,7 +37,7 @@ Alternatives
 Database Cleaner is good for transaction-based rollback and truncating tables. It also works on
 multiple ORMs and database engines.
 
-Once you start dealing with external tests (e.g. Selenium or Sahi) and longish scenarios,
+Once you start dealing with external tests (e.g. Selenium or Sahi) and longish scenarios with branching test cases,
 you should consider Checkpointer.
 
 How to use
