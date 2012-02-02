@@ -67,7 +67,7 @@ module Checkpointer
 
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
-        result.map{|h| h.values}.flatten
+        column_values(result)
       end
 
       # Return a column of values from a query result as an array
