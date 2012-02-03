@@ -98,7 +98,20 @@ module Checkpointer
       
       # Normalize result of single-column queries into an array.
       def normalize_result(result)
-        result.to_a.flatten
+        #result.to_a.flatten
+        column_values(result)
+      end
+
+      # Return a column of values from a query result as an array
+      def column_values(result, column=0)
+        if column.kind_of?(Fixnum)
+          return nil if result.fields[column].nil?
+        else
+          column = result.fields.index(column)
+          return nil if column.nil?
+        end
+
+        result.map{|h| h[column]}
       end
 
   	end
