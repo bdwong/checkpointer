@@ -39,6 +39,17 @@ module Checkpointer
     context "instantiated with dummy connection" do
       before(:each) do
         @c = Checkpointer.new
+        @connection = @c.sql_connection
+        @connection.stub(:escape) {|value| value}
+        @connection.stub(:identifier) {|value| "`#{value}`"}
+        @connection.stub(:literal) {|value| "'#{value}'"}
+        @connection.stub(:tables_from).with('database').and_return(['table_1', 'table_2'])
+
+        # This should be unstubbed for individual cases if expecting queries:
+        # @connection.unstub(:execute)
+        @connection.stub(:execute) do |value|
+          raise "Unexpected query string: \"#{value}\""
+        end
       end
 
       describe :sql_connection do
@@ -48,11 +59,34 @@ module Checkpointer
       end
 
       describe :tracking_table do
-        subject == "updated_tables"
+        it "should be 'updated_tables'" do
+          @c.tracking_table.should == "updated_tables"
+        end
       end
 
       describe :track do
-        pending
+        # NOTE: these tests are too tight, considering they are tested
+        # again... consider loosening them.
+        it "should start tracking database changes" do
+          @connection.unstub(:execute)
+
+          @connection.should_receive(:execute).with("DROP TABLE IF EXISTS `database`.`updated_tables`;")
+          @connection.should_receive(:execute).with("CREATE TABLE IF NOT EXISTS `database`.`updated_tables`(name char(64), PRIMARY KEY (name));")
+
+          @connection.should_receive(:execute).with(/^\s*CREATE TRIGGER `database`.`table_1_/).exactly(3).times
+          @connection.should_receive(:execute).with(/^\s*CREATE TRIGGER `database`.`table_2_/).exactly(3).times
+
+          dbcopier = double("DatabaseCopierInstance")
+          dbcopier.stub(:copy_database).with('database', 'database_backup')
+          DatabaseCopier.should_receive(:from_connection).and_return(dbcopier)
+
+          # Catch unexpected queries, must go last.
+          @connection.stub(:execute) do |value|
+            raise "Unexpected query string: \"#{value}\""
+          end
+
+          @c.track
+        end
       end
 
       describe :untrack do
@@ -124,21 +158,137 @@ module Checkpointer
       end
 
       describe :create_tracking_table do
-        pending
+        it "should create the tracking table" do
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with("CREATE TABLE IF NOT EXISTS `database`.`updated_tables`(name char(64), PRIMARY KEY (name));")
+          @c.send(:create_tracking_table)
+        end
       end
 
       describe :drop_tracking_table do
-        pending
+        it "should drop the tracking table" do
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with("DROP TABLE IF EXISTS `database`.`updated_tables`;")
+          @c.send(:drop_tracking_table)
+        end
       end
 
       describe :add_triggers do
-        pending
+        it "should add triggers to tables in the database" do
+          @connection.unstub(:execute)
+
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_insert` AFTER insert \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_update` AFTER update \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_delete` AFTER delete \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_2_insert` AFTER insert \
+            ON `table_2` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_2_update` AFTER update \
+            ON `table_2` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_2_delete` AFTER delete \
+            ON `table_2` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
+          EOF
+          )
+          # Catch unexpected queries, must go last.
+          @connection.stub(:execute) do |value|
+            raise "Unexpected query string: \"#{value}\""
+          end
+
+          @c.send(:add_triggers)
+        end
+
+        it "should not add triggers to the tracking table" do
+          @connection.stub(:tables_from).with('database').and_return(['updated_tables', 'table_1', 'table_2'])
+          @connection.tables_from('database').count.should == 3
+
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with(/^\s*CREATE TRIGGER `database`.`table_1_/).exactly(3).times
+          @connection.should_receive(:execute).with(/^\s*CREATE TRIGGER `database`.`table_2_/).exactly(3).times
+          @connection.should_not_receive(:execute).with(/^\s*CREATE TRIGGER `database`.`updated_tables_/)
+          @connection.stub(:execute) do |value|
+            raise "Unexpected query string: \"#{value}\""
+          end
+          @c.send(:add_triggers)
+        end
+      end
+
+      describe :add_triggers_to_table do
+        it "should add triggers to a table" do
+          @connection.unstub(:execute)
+
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_insert` AFTER insert \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_update` AFTER update \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @connection.should_receive(:execute).with(<<-EOF
+          CREATE TRIGGER `database`.`table_1_delete` AFTER delete \
+            ON `table_1` FOR EACH ROW \
+            INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
+          EOF
+          )
+          @c.send(:add_triggers_to_table, 'database', 'table_1')
+        end
+
         it "should handle ::Checkpointer::Database::DuplicateTriggerErrors" do
+          @connection.should_receive(:execute).exactly(3).times.and_raise(::Checkpointer::Database::DuplicateTriggerError)
+          @c.send(:add_triggers_to_table, 'database', 'table_1')
         end
       end
 
       describe :remove_triggers do
-        pending
+        it "should remove triggers from the database" do
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_1_insert`;")
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_1_update`;")
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_1_delete`;")
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_2_insert`;")
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_2_update`;")
+          @connection.should_receive(:execute).with("DROP TRIGGER IF EXISTS `database`.`table_2_delete`;")
+          @c.send(:remove_triggers)
+        end
+
+        it "should not remove triggers from tracking table" do
+          @connection.stub(:tables_from).with('database').and_return(['updated_tables', 'table_1', 'table_2'])
+          @connection.tables_from('database').count.should == 3
+
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with(/^DROP TRIGGER.*table_1/).exactly(3).times
+          @connection.should_receive(:execute).with(/^DROP TRIGGER.*table_2/).exactly(3).times
+          @connection.should_not_receive(:execute).with(/^DROP TRIGGER.*updated_tables/)
+          @c.send(:remove_triggers)
+        end
       end
     end
 

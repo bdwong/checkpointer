@@ -25,8 +25,7 @@ module Checkpointer
       "updated_tables"
     end
 
-    # Create monitoring triggers
-    # Prerequisite: database is backed up.
+    # Backup the database and create monitoring triggers
     def track
       drop_tracking_table
       create_tracking_table
