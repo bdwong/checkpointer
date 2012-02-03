@@ -74,12 +74,12 @@ module ::Checkpointer::Database
           @c.identifier("'test'").should == '`\'test\'`'
         end
         
-        it 'should escape and quote backslash' do
-          @c.identifier("blah\\identifier").should == '`blah\\\\identifier`'
+        it 'should not escape backslash' do
+          @c.identifier("blah\\identifier").should == '`blah\\identifier`'
         end
 
-        it 'should escape and quote backtick' do
-          @c.identifier("blah\`identifier").should == '`blah\\`identifier`'
+        it 'should escape and backtick' do
+          @c.identifier("blah\`identifier").should == '`blah``identifier`'
         end
       end
 

@@ -39,7 +39,7 @@ module Checkpointer
 
       # Properly escape and quote an identifier such as database, table or column name.
       def identifier(value)
-        "\`#{value.gsub('\\', '\\\\\\\\').gsub('`', '\\\\`')}\`"
+        "\`#{value.gsub('`', '``')}\`"
       end
 
       # Properly escape and quote a string literal.
