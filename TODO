@@ -1,7 +1,8 @@
 TOOD:
+- Reflect the current gem install command line
+- Discuss database setup and permissions in README
 - Specs that expect the correct sql query strings on execute()
 - Cucumber tests on real databases
-- Ensure triggers when a table is dropped and created.
 
 - Rescue unknown database:
 Mysql2::Error: Unknown database 'database_backup_x'
