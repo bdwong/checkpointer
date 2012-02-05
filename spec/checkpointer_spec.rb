@@ -65,8 +65,6 @@ module Checkpointer
       end
 
       describe :track do
-        # NOTE: these tests are too tight, considering they are tested
-        # again... consider loosening them.
         it "should start tracking database changes" do
           @connection.unstub(:execute)
 
@@ -150,11 +148,31 @@ module Checkpointer
       end
 
       describe :tables_from do
-        pending
+        it "should return all tables in the database" do
+          @c.send(:tables_from, 'database').should == ['table_1', 'table_2']
+        end
+
+        it "should return the tracking table among all tables in the database" do
+          @connection.stub(:tables_from).with('database').and_return(['table_1', 'table_2', 'updated_tables'])
+          @c.send(:tables_from, 'database').should == ['table_1', 'table_2', 'updated_tables']
+        end
+
+        it "should always put the tracking table last" do
+          @connection.stub(:tables_from).with('database').and_return(['updated_tables', 'table_1', 'table_2'])
+          @c.send(:tables_from, 'database').should == ['table_1', 'table_2', 'updated_tables']
+        end
       end
 
       describe :changed_tables_from do
-        pending
+        it "should list all records in the tracking table plus the tracking table" do
+          @connection.unstub(:execute)
+          # We shouldn't have to stub normalize_result here... refactoring needed.
+          @connection.stub(:normalize_result) {|value| value}
+
+          @connection.should_receive(:execute).with('SELECT name FROM `database`.`updated_tables`').
+            and_return(['table_1'])
+          @c.send(:changed_tables_from, 'database').should == ['table_1', 'updated_tables']
+        end
       end
 
       describe :create_tracking_table do
