@@ -4,7 +4,9 @@ Checkpointer
 Installation
 ------------
 
-    gem install checkpointer
+In your Gemfile:
+
+    gem 'checkpointer', :git => "git://github.com/bdwong/checkpointer.git"
 
 Why Checkpointer?
 -----------------
