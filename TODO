@@ -4,5 +4,11 @@ TOOD:
 - Specs that expect the correct sql query strings on execute()
 - Cucumber tests on real databases
 
-- Rescue unknown database:
+- Rescue unknown database when instantiating Checkpointer:
 Mysql2::Error: Unknown database 'database_backup_x'
+- drivers should raise ::Checkpointer::Database::DatabaseNotFoundError when Mysql2::Error is raised with e.errno == 1049 or /^Unknown database/
+
+- Rescue when tracking table doesn't exist when restoring checkpoint:
+Mysql2::Error: Table 'database.updated_tables' doesn't exist
+This could happen if tracking was not started.
+- DatabaseCopier.copy_tables should raise ::Checkpointer::Database::DatabaseNotFoundError if source database is missing.

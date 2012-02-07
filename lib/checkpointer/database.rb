@@ -5,6 +5,7 @@ require 'checkpointer/database/active_record_adapter'
 module Checkpointer
   module Database
     class DuplicateTriggerError < Exception; end
+    class DatabaseNotFoundError < Exception; end
 
     def database_adapters
       [ActiveRecordAdapter, Mysql2Adapter]

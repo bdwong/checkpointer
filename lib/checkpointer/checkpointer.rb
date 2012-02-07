@@ -21,6 +21,10 @@ module Checkpointer
       @db_adapter
     end
 
+    def database
+      @db_name
+    end
+
     def tracking_table
       "updated_tables"
     end
@@ -47,7 +51,7 @@ module Checkpointer
       raise ArgumentError.new("Manual checkpoints cannot be a number.") if is_number?(cp)
 
       # Backup all changed tables.
-      table_names = changed_tables_from(@db_name)
+      table_names = changed_tables_from(@db_name) << tracking_table
       if cp.nil?
         @checkpoint_number += 1
         cp = @checkpoint_number
@@ -175,7 +179,7 @@ module Checkpointer
     # Select table names from tracking table
     def changed_tables_from(db)
       result = sql_connection.execute("SELECT name FROM #{sql_connection.identifier(db)}.#{sql_connection.identifier(tracking_table)}")
-      sql_connection.normalize_result(result) << tracking_table
+      sql_connection.normalize_result(result)
     end
 
     def create_tracking_table
