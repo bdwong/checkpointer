@@ -297,11 +297,25 @@ module Checkpointer
       end
 
       describe :backup do
-        pending
+        it "should delegate to DatabaseCopier" do
+          DatabaseCopier.any_instance.should_receive(:copy_database).
+            with('database', 'database_backup')
+          @c.backup
+        end
       end
 
       describe :restore_all do
-        pending
+        it "should restore database using DatabaseCopier" do
+          @connection.unstub(:execute)
+          @connection.stub(:tables_from).with('database_backup').and_return(['table_1', 'table_2'])
+          DatabaseCopier.any_instance.should_receive(:drop_tables_not_in_source).
+            with('database_backup', 'database')
+          DatabaseCopier.any_instance.should_receive(:copy_tables).
+            with(['table_1', 'table_2'], 'database_backup', 'database')
+          @connection.should_receive(:execute).
+            with("CREATE TABLE IF NOT EXISTS `database`.`updated_tables`(name char(64), PRIMARY KEY (name));")
+          @c.restore_all
+        end
       end
 
       describe :is_number? do

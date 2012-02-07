@@ -155,6 +155,7 @@ module Checkpointer
     def restore_all
       tables = tables_from(@db_backup)
       db_copier = DatabaseCopier.from_connection(@db_adapter)
+      db_copier.drop_tables_not_in_source(@db_backup, @db_name)
       db_copier.copy_tables(tables, @db_backup, @db_name) do |tbl, op|
         add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
