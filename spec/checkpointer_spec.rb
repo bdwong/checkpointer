@@ -220,23 +220,91 @@ module Checkpointer
       end
 
       describe :pop do
-        pending
+        before(:each) do
+          @connection.unstub(:execute)
+          # We shouldn't have to stub normalize_result here... refactoring needed.
+          @connection.stub(:normalize_result) {|value| value}
+          @connection.stub(:execute).with('SELECT name FROM `database`.`updated_tables`').
+            and_return(['table_1', 'table_2'])
+        end
+
+        it "should restore the highest checkpoint and drop it" do
+          @c.instance_variable_set(:@last_checkpoint, 2)
+          @c.instance_variable_set(:@checkpoint_number, 4)
+          @connection.should_receive(:tables_from).with('database_backup_4').
+            and_return(['table_1', 'updated_tables'])
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_2', 'database_backup_3', 'database_backup_4'])
+          @connection.should_receive(:execute).with('DROP DATABASE `database_backup_4`')
+
+          DatabaseCopier.any_instance.should_receive(:copy_tables).
+            with(['table_2'], 'database_backup', 'database')
+          DatabaseCopier.any_instance.should_receive(:copy_tables).
+            with(['table_1', 'updated_tables'], 'database_backup_4', 'database')
+          @c.pop.should == 3
+        end
+
       end
 
       describe :drop do
-        pending
+        it "should delegate numbers to drop_checkpoint_number" do
+          @c.should_receive(:drop_checkpoint_number).with(3)
+          @c.should_not_receive(:drop_checkpoint_name)
+
+          @c.drop(3)
+        end
+
+        it "should delegate strings to drop_checkpoint_by_name" do
+          @c.should_receive(:drop_checkpoint_name).with("name")
+          @c.should_not_receive(:drop_checkpoint_number)
+
+          @c.drop("name")
+        end
+
+        it "should default to the highest checkpoint number" do
+          @c.instance_variable_set(:@last_checkpoint, 2)
+          @c.instance_variable_set(:@checkpoint_number, 4)
+          @c.should_receive(:drop_checkpoint_number).with(4)
+
+          @c.drop
+        end
       end
 
       describe :drop_checkpoint_number do
-        pending
+        it "should drop checkpoints on or above a number" do
+          @connection.unstub(:execute)
+          # We shouldn't have to stub normalize_result here... refactoring needed.
+          @connection.stub(:normalize_result) {|value| value}
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_2', 'database_backup_3', 'database_backup_4'])
+          @connection.should_receive(:execute).with('DROP DATABASE `database_backup_3`')
+          @connection.should_receive(:execute).with('DROP DATABASE `database_backup_4`')
+
+          @c.drop(3).should == 2
+        end
       end
 
       describe :drop_checkpoint_name do
-        pending
+        it "should drop checkpoint by name" do
+          @connection.unstub(:execute)
+          # We shouldn't have to stub normalize_result here... refactoring needed.
+          @connection.stub(:normalize_result) {|value| value}
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_start', 'database_backup_2'])
+          @connection.should_receive(:execute).with('DROP DATABASE `database_backup_start`')
+          @c.drop("start")
+        end
       end
 
       describe :checkpoints do
-        pending
+        it "should list checkpoints for the database" do
+          # We shouldn't have to stub normalize_result here... refactoring needed.
+          @connection.stub(:normalize_result) {|value| value}
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_special', 'database_backup_2'])
+
+          @c.checkpoints.should == ['1', 'special', '2']
+        end
       end
 
       describe :backup do
