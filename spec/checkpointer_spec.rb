@@ -43,6 +43,7 @@ module Checkpointer
         @connection.stub(:escape) {|value| value}
         @connection.stub(:identifier) {|value| "`#{value}`"}
         @connection.stub(:literal) {|value| "'#{value}'"}
+        @connection.stub(:normalize_result) {|value| value}
         @connection.stub(:tables_from).with('database').and_return(['table_1', 'table_2'])
 
         # This should be unstubbed for individual cases if expecting queries:
@@ -108,8 +109,6 @@ module Checkpointer
         context "success" do
           before(:each) do
             @connection.unstub(:execute)
-            # We shouldn't have to stub normalize_result here... refactoring needed.
-            @connection.stub(:normalize_result) {|value| value}
             @connection.should_receive(:execute).with('SELECT name FROM `database`.`updated_tables`').
               and_return(['table_1'])
           end
@@ -152,8 +151,6 @@ module Checkpointer
       describe :restore do
         before(:each) do
           @connection.unstub(:execute)
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.stub(:execute).with('SELECT name FROM `database`.`updated_tables`').
             and_return(['table_1', 'table_2'])
         end
@@ -222,8 +219,6 @@ module Checkpointer
       describe :pop do
         before(:each) do
           @connection.unstub(:execute)
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.stub(:execute).with('SELECT name FROM `database`.`updated_tables`').
             and_return(['table_1', 'table_2'])
         end
@@ -273,8 +268,6 @@ module Checkpointer
       describe :drop_checkpoint_number do
         it "should drop checkpoints on or above a number" do
           @connection.unstub(:execute)
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
             and_return(['database_backup_1', 'database_backup_2', 'database_backup_3', 'database_backup_4'])
           @connection.should_receive(:execute).with('DROP DATABASE `database_backup_3`')
@@ -287,8 +280,6 @@ module Checkpointer
       describe :drop_checkpoint_name do
         it "should drop checkpoint by name" do
           @connection.unstub(:execute)
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
             and_return(['database_backup_1', 'database_backup_start', 'database_backup_2'])
           @connection.should_receive(:execute).with('DROP DATABASE `database_backup_start`')
@@ -298,8 +289,6 @@ module Checkpointer
 
       describe :checkpoints do
         it "should list checkpoints for the database" do
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
             and_return(['database_backup_1', 'database_backup_special', 'database_backup_2'])
 
@@ -354,8 +343,6 @@ module Checkpointer
       describe :changed_tables_from do
         it "should list all records in the tracking table (tracking table not included)" do
           @connection.unstub(:execute)
-          # We shouldn't have to stub normalize_result here... refactoring needed.
-          @connection.stub(:normalize_result) {|value| value}
           @connection.should_receive(:execute).with('SELECT name FROM `database`.`updated_tables`').
             and_return(['table_1'])
           @c.send(:changed_tables_from, 'database').should == ['table_1']
