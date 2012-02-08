@@ -48,18 +48,16 @@ module Checkpointer
 
     def show_create_table_without_increment(db, table)
       create_sql = sql_connection.show_create_table(db, table)
-      if not create_sql.nil?
-        matches = create_sql.match(/\sAUTO_INCREMENT=([0-9]+)/)
-        if matches.nil?
-          auto_increment = 0
-        else
-          auto_increment = matches[1]
-        end
-        create_sql.gsub!(/\s+AUTO_INCREMENT=[0-9]+\s*/," ") # Remove auto-increment
-        return [create_sql, auto_increment]
+      return nil if create_sql.nil?
+
+      matches = create_sql.match(/\sAUTO_INCREMENT=([0-9]+)/)
+      if matches.nil?
+        auto_increment = 0
       else
-        return [nil, 0]
+        auto_increment = matches[1]
       end
+      create_sql.gsub!(/\s+AUTO_INCREMENT=[0-9]+\s*/," ") # Remove auto-increment
+      [create_sql, auto_increment]
     end
 
     # Copy tables table_names from from_db to to_db.
@@ -103,7 +101,7 @@ module Checkpointer
         end
 
         if block_given?
-          yield tbl, op
+          yield name, op
         end
 
         sql_connection.execute("INSERT INTO #{to_escaped}.#{tbl} SELECT * FROM #{from_escaped}.#{tbl}")
