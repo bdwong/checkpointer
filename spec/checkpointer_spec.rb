@@ -1,4 +1,4 @@
-require 'spec/spec_helper.rb'
+require File.dirname(__FILE__) + '/spec_helper.rb'
 
 # Fake out ActiveRecord for testing.
 module ActiveRecord

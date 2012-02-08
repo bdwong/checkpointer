@@ -1,13 +1,18 @@
-#require 'simplecov'
+begin
+  require 'simplecov'
 
-# SimpleCov.start do
-#   add_filter "spec/"
-# end
+  SimpleCov.start do
+    add_filter "spec/"
+  end
+rescue LoadError
+  # simplecov is not compatible with ruby 1.8
+end
 
 require 'rspec'
 require 'mysql2'
 require 'active_record'
-require 'lib/checkpointer'
+require File.dirname(__FILE__) + '/../lib/checkpointer'
+#require 'lib/checkpointer'
 
 # Require shared examples and other support files
 Dir["./spec/support/**/*.rb"].each {|f| require f}
