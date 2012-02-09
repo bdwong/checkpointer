@@ -198,6 +198,46 @@ module Checkpointer
           @c.restore(10).should == 10
         end
 
+        # All this is to verify that two callbacks get covered on copy_tables with a block.
+        it "should call add_triggers_to_table if table needs to create or drop_and_create" do
+          @c.instance_variable_set(:@last_checkpoint, 2)
+          @c.instance_variable_set(:@checkpoint_number, 2)
+          @connection.should_receive(:tables_from).with('database_backup_2').
+            and_return(['table_1'])
+
+          @connection.stub(:execute).with('set autocommit = 0;')
+          @connection.stub(:execute).with('set unique_checks = 0;')
+          @connection.stub(:execute).with('set foreign_key_checks = 0;')
+
+          DatabaseCopier.any_instance.stub(:show_create_table_without_increment).
+            with('database', 'table_2').
+            and_return('FORCE DROP AND CREATE')
+          DatabaseCopier.any_instance.stub(:show_create_table_without_increment).
+            with('database_backup', 'table_2').
+            and_return('BY RETURNING DIFFERENT VALUE')
+          @connection.stub(:execute).with('DROP TABLE `database`.`table_2`')
+          @connection.stub(:execute).with('CREATE TABLE IF NOT EXISTS `database`.`table_2` LIKE `database_backup`.`table_2`')
+          @c.should_receive(:add_triggers_to_table).with('database', 'table_2')
+          @connection.stub(:execute).with('INSERT INTO `database`.`table_2` SELECT * FROM `database_backup`.`table_2`')
+
+          DatabaseCopier.any_instance.stub(:show_create_table_without_increment).
+            with('database', 'table_1').
+            and_return(nil)
+          DatabaseCopier.any_instance.stub(:show_create_table_without_increment).
+            with('database_backup_2', 'table_1').
+            and_return('THIS TABLE SHOULD BE CREATED')
+          @connection.stub(:execute).with('CREATE TABLE IF NOT EXISTS `database`.`table_1` LIKE `database_backup_2`.`table_1`')
+          @c.should_receive(:add_triggers_to_table).with('database', 'table_1')
+          @connection.stub(:execute).with('INSERT INTO `database`.`table_1` SELECT * FROM `database_backup_2`.`table_1`')
+
+          @connection.stub(:execute).with('COMMIT;')
+          @connection.stub(:execute).with('set foreign_key_checks = 1;')
+          @connection.stub(:execute).with('set unique_checks = 1;')
+          @connection.stub(:execute).with('set autocommit = 1;')
+
+          @c.restore.should == 2
+        end
+
         context "no backup database" do
           it "should raise an error if backup database does not exist" do
             DatabaseCopier.any_instance.should_receive(:copy_tables).
@@ -285,6 +325,28 @@ module Checkpointer
           @connection.should_receive(:execute).with('DROP DATABASE `database_backup_start`')
           @c.drop("start")
         end
+
+        it "should change the last checkpoint to a number if the last checkpoint was dropped" do
+          @c.instance_variable_set(:@checkpoint_number, 2)
+          @c.instance_variable_set(:@last_checkpoint, "this_one")
+
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_this_one', 'database_backup_2'])
+          @connection.should_receive(:execute).with('DROP DATABASE `database_backup_this_one`')
+          @c.drop("this_one").should == 2
+
+          @c.instance_variable_get(:@last_checkpoint).should == 2
+        end
+
+        it "should return nil if the checkpoint was not found" do
+          @connection.unstub(:execute)
+          @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
+            and_return(['database_backup_1', 'database_backup_2'])
+          @connection.should_not_receive(:execute).with('DROP DATABASE `database_backup_non_existent`')
+          @c.drop("non_existent").should be_nil
+        end
+
       end
 
       describe :checkpoints do
