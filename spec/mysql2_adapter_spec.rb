@@ -4,6 +4,17 @@ module ::Checkpointer::Database
   describe Mysql2Adapter do
     it_behaves_like 'a configured database adapter'
 
+    describe :configured? do
+      it 'should return true if mysql2 can be required' do
+        Mysql2Adapter.should be_configured
+      end
+
+      it 'should return false if mysql2 cannot be required' do
+        Mysql2Adapter.stub(:require).with('mysql2').and_raise(LoadError.new)
+        Mysql2Adapter.should_not be_configured
+      end
+    end
+
     it 'should raise Checkpointer::Database::DuplicateTriggerError on duplicate trigger' do
       Mysql2::Client.any_instance.stub(:query).and_raise(Mysql2::Error.new("This version of MySQL doesn't yet support 'multiple triggers with the same action time and event for one table'"))
 

@@ -2,7 +2,12 @@ module Checkpointer
   module Database
     class Mysql2Adapter < Adapter
       def self.configured?
-        true
+        begin
+          require 'mysql2'
+          true
+        rescue LoadError
+          false
+        end
       end
 
       def initialize(options={})
