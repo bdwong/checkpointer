@@ -36,8 +36,6 @@ module ::Checkpointer::Database
         after(:all) { unhide_active_record }
 
         it 'should return false if ActiveRecord is not loaded' do
-          described_class.stub(:active_record_base).and_raise(NameError.new('uninitialized constant ActiveRecord'))
-
           described_class.should_not be_configured
         end
       end

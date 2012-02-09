@@ -5,14 +5,9 @@ module Checkpointer
         has_active_record? and has_active_record_connection?
       end
 
-      # Override this for testing.
-      def self.active_record_base
-        ActiveRecord::Base
-      end
-
       def self.has_active_record?
         begin
-          active_record_base
+          ActiveRecord::Base
         rescue NameError # NameError: uninitialized constant ActiveRecord
           return false
         end
@@ -21,7 +16,7 @@ module Checkpointer
 
       def self.has_active_record_connection?
         begin
-          return true if not active_record_base.connection.nil?
+          return true if not ActiveRecord::Base.connection.nil?
         rescue ActiveRecord::ConnectionNotEstablished
           return false
         end
@@ -29,15 +24,11 @@ module Checkpointer
 
       def initialize(options={})
         # TODO
-        @connection = active_record_base.connection
+        @connection = ActiveRecord::Base.connection
         # if not @connection.raw_connection.kind_of?(Mysql2::Client)
         #   raise RuntimeError.new('Checkpointer only works with Mysql2 client on ActiveRecord.')
         # end
         
-      end
-
-      def active_record_base
-        ActiveRecordAdapter.active_record_base
       end
 
       def current_database
