@@ -1,6 +1,5 @@
 TOOD:
 - Discuss database setup and permissions in README
-- Specs that expect the correct sql query strings on execute()
 - Create easy-access module for rails controllers
 - Refactor tracking code into its own class
 	- create log tracker
