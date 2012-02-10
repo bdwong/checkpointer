@@ -2,6 +2,17 @@ require File.dirname(__FILE__) + '/spec_helper.rb'
 
 module Checkpointer
   describe DatabaseCopier do
+    def stub_copy_tables_boilerplate
+      @connection.stub(:execute).with('set autocommit = 0;')
+      @connection.stub(:execute).with('set unique_checks = 0;')
+      @connection.stub(:execute).with('set foreign_key_checks = 0;')
+      
+      @connection.stub(:execute).with('COMMIT;')
+      @connection.stub(:execute).with('set foreign_key_checks = 1;')
+      @connection.stub(:execute).with('set unique_checks = 1;')
+      @connection.stub(:execute).with('set autocommit = 1;')
+    end
+
     context "instantiation" do
       it "should create instantiate a database adapter as the connection" do
         adapter_instance = double("adapter_instance")
@@ -61,7 +72,26 @@ module Checkpointer
       end
 
       describe :copy_database do
-        pending
+        it "should copy a database" do
+          @connection.should_receive(:execute).with('CREATE DATABASE IF NOT EXISTS `target` CHARACTER SET utf8 COLLATE utf8_general_ci')
+          @connection.should_receive(:tables_from).with('source').twice.
+            and_return(['table_1'])
+          @connection.should_receive(:tables_from).with('target').
+            and_return(['table_1'])
+          
+          stub_copy_tables_boilerplate
+
+          # Setup to create table
+          @connection.should_receive(:show_create_table).with("source", "table_1").
+            and_return('CREATE_TABLE `table_1` with parameters...;')
+          @connection.should_receive(:show_create_table).with("target", "table_1").
+            and_return(nil)
+
+          @connection.should_receive(:execute).with('CREATE TABLE IF NOT EXISTS `target`.`table_1` LIKE `source`.`table_1`')
+          @connection.should_receive(:execute).with('INSERT INTO `target`.`table_1` SELECT * FROM `source`.`table_1`')
+
+          @d.copy_database('source', 'target')
+        end
       end
 
       describe :show_create_table_without_increment do
@@ -161,27 +191,11 @@ module Checkpointer
 
         context "with tables" do
           before(:each) do
-            @connection.stub(:execute).with('set autocommit = 0;')
-            @connection.stub(:execute).with('set unique_checks = 0;')
-            @connection.stub(:execute).with('set foreign_key_checks = 0;')
+            stub_copy_tables_boilerplate
 
             @connection.stub(:show_create_table) do |db, table|
               "CREATE TABLE #{table}...;"
             end
-            # @connection.unstub(:show_create_table)
-            # @connection.should_receive(:show_create_table).with("source", "table_1").
-            #   and_return('CREATE_TABLE `table_1`...;')
-            # @connection.should_receive(:show_create_table).with("target", "table_1").
-            #   and_return('CREATE_TABLE `table_1`...;')
-            # @connection.should_receive(:show_create_table).with("source", "table_2").
-            #   and_return('CREATE_TABLE `table_2`...;')
-            # @connection.should_receive(:show_create_table).with("target", "table_2").
-            #   and_return('CREATE_TABLE `table_2`...;')
-
-            @connection.stub(:execute).with('COMMIT;')
-            @connection.stub(:execute).with('set foreign_key_checks = 1;')
-            @connection.stub(:execute).with('set unique_checks = 1;')
-            @connection.stub(:execute).with('set autocommit = 1;')
           end
 
           it "should copy a list of tables" do
