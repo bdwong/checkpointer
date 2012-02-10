@@ -76,11 +76,7 @@ module Checkpointer
         print "t"
         ["insert", "update", "delete"].each do |operation|
           trigger_name = sql_connection.identifier("#{table}_#{operation}")
-          cmd = <<-EOF
-CREATE TRIGGER #{db}.#{trigger_name} AFTER #{operation} \
-  ON #{tbl_identifier} FOR EACH ROW \
-  INSERT IGNORE INTO #{db}.#{track_tbl} VALUE (#{tbl_value});
-EOF
+          cmd = "CREATE TRIGGER #{db}.#{trigger_name} AFTER #{operation} ON #{tbl_identifier} FOR EACH ROW INSERT IGNORE INTO #{db}.#{track_tbl} VALUE (#{tbl_value});"
           begin
             sql_connection.execute(cmd)
           rescue ::Checkpointer::Database::DuplicateTriggerError

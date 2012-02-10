@@ -468,43 +468,12 @@ module Checkpointer
       describe :add_triggers do
         it "should add triggers to tables in the database" do
           @connection.unstub(:execute)
-
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_insert` AFTER insert \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_update` AFTER update \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_delete` AFTER delete \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_2_insert` AFTER insert \
-  ON `table_2` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_2_update` AFTER update \
-  ON `table_2` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_2_delete` AFTER delete \
-  ON `table_2` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');
-EOF
-          )
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_insert` AFTER insert ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_update` AFTER update ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_delete` AFTER delete ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_2_insert` AFTER insert ON `table_2` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_2_update` AFTER update ON `table_2` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_2_delete` AFTER delete ON `table_2` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_2');")
           # Catch unexpected queries, must go last.
           @connection.stub(:execute) do |value|
             raise "Unexpected query string: \"#{value}\""
@@ -532,24 +501,9 @@ EOF
         it "should add triggers to a table" do
           @connection.unstub(:execute)
 
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_insert` AFTER insert \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_update` AFTER update \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
-          @connection.should_receive(:execute).with(<<-EOF
-CREATE TRIGGER `database`.`table_1_delete` AFTER delete \
-  ON `table_1` FOR EACH ROW \
-  INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');
-EOF
-          )
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_insert` AFTER insert ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_update` AFTER update ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
+          @connection.should_receive(:execute).with("CREATE TRIGGER `database`.`table_1_delete` AFTER delete ON `table_1` FOR EACH ROW INSERT IGNORE INTO `database`.`updated_tables` VALUE ('table_1');")
           @c.send(:add_triggers_to_table, 'database', 'table_1')
         end
 
