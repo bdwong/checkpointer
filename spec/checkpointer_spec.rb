@@ -355,8 +355,8 @@ module Checkpointer
             with('database_backup', 'database')
           DatabaseCopier.any_instance.should_receive(:copy_tables).
             with(['table_1', 'table_2'], 'database_backup', 'database')
-          @connection.should_receive(:execute).
-            with("CREATE TABLE IF NOT EXISTS `database`.`updated_tables`(name char(64), PRIMARY KEY (name));")
+          Database::Tracker.any_instance.should_receive(:create_tracking_table)
+
           @c.restore_all
         end
         
@@ -368,8 +368,7 @@ module Checkpointer
           DatabaseCopier.any_instance.stub(:drop_tables_not_in_source)
           stub_copy_table_needs_drop_and_create('database_backup', 'database', 'table_1')
           stub_copy_table_needs_creating('database_backup', 'database', 'table_2')
-
-          @c.should_receive(:create_tracking_table)
+          Database::Tracker.any_instance.should_receive(:create_tracking_table)
 
           @c.restore_all
         end
@@ -406,13 +405,6 @@ module Checkpointer
         it "should delegate to Tracker" do
           Database::Tracker.any_instance.should_receive(:changed_tables_from).with('database')
           @c.send(:changed_tables_from, 'database')
-        end
-      end
-
-      describe :create_tracking_table do
-        it "should delegate to Tracker" do
-          Database::Tracker.any_instance.should_receive(:create_tracking_table)
-          @c.send(:create_tracking_table)
         end
       end
 

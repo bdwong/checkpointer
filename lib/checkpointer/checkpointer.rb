@@ -154,7 +154,7 @@ module Checkpointer
         add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
       # Ensure tracking table
-      create_tracking_table
+      @tracker.create_tracking_table
     end
 
     private
@@ -169,10 +169,6 @@ module Checkpointer
     # Select table names from tracking table
     def changed_tables_from(db)
       @tracker.changed_tables_from(db)
-    end
-
-    def create_tracking_table
-      @tracker.create_tracking_table
     end
 
     # Add triggers to an individual table.
