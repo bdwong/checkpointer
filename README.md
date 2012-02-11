@@ -31,7 +31,7 @@ In your Gemfile:
 Usage
 -----
 
-=== Start tracking the database
+### Start tracking the database
 
 ```ruby
 require 'checkpointer'
@@ -42,7 +42,7 @@ c.track
 #=> nil
 ```
 
-=== Scenario 1: Branching test cases
+### Scenario 1: Branching test cases
 
 ```ruby
 # Starting from a newly tracked database...
@@ -63,7 +63,7 @@ c.restore 0     # restore to clean database for next scenario
 #=> 0
 ```
 
-=== Scenario 2: Creating sample data
+### Scenario 2: Creating sample data
 
 ```ruby
 # Starting from a newly tracked database...
@@ -76,28 +76,18 @@ c.restore 0     # restore to clean database for next scenario
 c.untrack
 ```
 
-    c.checkpoint            # Set checkpoints in a stack
-    #=> 1
-    c.checkpoint            # Set checkpoints in a stack
-    #=> 2
-    c.checkpoint "special"  # Set named checkpoints
-    #=> nil
+=== Other commands
+
+```ruby
     c.checkpoints           # List checkpoints
     #=> [1, 2, "special"]
 
-    # Do stuff to the database
-
-    c.restore               # Restore last checkpoint
-    #=> "special"
-    c.restore 2             # Restore checkpoint 2 on the stack
-    #=> 2
-    c.restore "special"     # Restore named checkpoint
-    #=> "special"
     c.pop                   # Restore checkpoint 2 from the stack and remove it
     #=> 1
 
     c.drop                  # Delete checkpoint off the top of the stack
     #=> 0
+    
     c.restore_all           # Restore all tables if you have problems.
     #=> nil
 ```
