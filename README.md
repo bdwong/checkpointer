@@ -1,12 +1,7 @@
 Checkpointer
 ============
 
-Installation
-------------
-
-In your Gemfile:
-
-    gem 'checkpointer', :git => "git://github.com/bdwong/checkpointer.git"
+Efficiently create and switch between multiple database checkpoints.
 
 Why Checkpointer?
 -----------------
@@ -19,19 +14,107 @@ Why Checkpointer?
 Features
 --------
 
-* Only saves tables that have changed.
+* Checkpoint across schema changes made with ALTER TABLE.
+* Tracking persists with multiple connections and sessions. This means that unlike transaction-based checkpoints, you can create another connection to see the current state of the database.
 * Works in the rails console with ActiveRecord or in the irb console with Mysql2.
-* Multiple checkpoints on a stack
-* Named checkpoints
+* Checkpoints on a stack or named checkpoints.
 * Restore to any checkpoint at any time.
+* Only saves tables that have changed.
+
+Installation
+------------
+
+In your Gemfile:
+
+    gem 'checkpointer', :git => "git://github.com/bdwong/checkpointer.git"
+
+Usage
+-----
+
+=== Start tracking the database
+
+```ruby
+require 'checkpointer'
+#=> true
+c = Checkpointer::Checkpointer.new(:database=>'MyApplication_development', :username=>'root', :password=>'mypassword')
+#=> <Checkpointer::Checkpointer>
+c.track
+#=> nil
+```
+
+=== Scenario 1: Branching test cases
+
+```ruby
+# Starting from a newly tracked database...
+
+# Perform common setup for scenario
+
+c.checkpoint "setup"
+#=> "setup"
+
+# Perform test case 1
+
+c.restore       # restore to last checkpoint
+#=> "setup"
+
+# Perform test case 2
+
+c.restore 0     # restore to clean database for next scenario
+#=> 0
+```
+
+=== Scenario 2: Creating sample data
+
+```ruby
+# Starting from a newly tracked database...
+
+```
+
+=== Stop tracking the database
+
+```ruby
+c.untrack
+```
+
+    c.checkpoint            # Set checkpoints in a stack
+    #=> 1
+    c.checkpoint            # Set checkpoints in a stack
+    #=> 2
+    c.checkpoint "special"  # Set named checkpoints
+    #=> nil
+    c.checkpoints           # List checkpoints
+    #=> [1, 2, "special"]
+
+    # Do stuff to the database
+
+    c.restore               # Restore last checkpoint
+    #=> "special"
+    c.restore 2             # Restore checkpoint 2 on the stack
+    #=> 2
+    c.restore "special"     # Restore named checkpoint
+    #=> "special"
+    c.pop                   # Restore checkpoint 2 from the stack and remove it
+    #=> 1
+
+    c.drop                  # Delete checkpoint off the top of the stack
+    #=> 0
+    c.restore_all           # Restore all tables if you have problems.
+    #=> nil
+```
+
+Database Setup
+--------------
+
+In order to use checkpointer, your database user must have access to a wildcard set of databases. Your user must have at least the following privilges: CREATE, INSERT, UPDATE, DELETE, DROP, TRIGGER, SHOW DATABASES. If you're not concerned about security, you can grant ALL, or you can use the Mysql root user. Example user setup:
+
+    GRANT ALL ON `database_%`.`*` TO 'dbuser' IDENTIFIED BY 'password';
 
 Limitations
----------
+-----------
 
-* Runs with Mysql2 or ActiveRecord on Mysql2 only.
+* Runs with Mysql2 or ActiveRecord on Mysql2 only (pull requests welcome!)
 * Uses triggers to detect database changes. Any database with existing triggers can't use Checkpointer (yet).
 * Becase of triggers, initial setup time is slow.
-* Initial backup is also slow, however subsequent backups are much faster.
 
 Alternatives
 ------------
@@ -41,40 +124,3 @@ multiple ORMs and database engines.
 
 Once you start dealing with external tests (e.g. Selenium or Sahi) and longish scenarios with branching test cases,
 you should consider Checkpointer.
-
-How to use
-----------
-
-```ruby
-    require 'checkpointer'
-    #=> true
-    c = Checkpointer::Checkpointer.new(:database=>'MyApplication_development', :username=>'root', :password=>'')
-    #=> <Checkpointer::Checkpointer>
-    c.track
-    #=> nil
-    c.checkpoint 			# Set checkpoints in a stack
-    #=> 1
-    c.checkpoint 			# Set checkpoints in a stack
-    #=> 2
-    c.checkpoint "special" 	# Set named checkpoints
-    #=> nil
-    c.checkpoints 			# List checkpoints
-    #=> [1, 2, "special"]
-
-    # Do stuff to the database
-
-    c.restore 				# Restore last checkpoint
-    #=> "special"
-    c.restore 2				# Restore checkpoint 2 on the stack
-    #=> 2
-    c.restore "special"		# Restore named checkpoint
-    #=> "special"
-    c.pop 					# Restore checkpoint 2 from the stack and remove it
-    #=> 1
-
-    c.drop 					# Delete checkpoint off the top of the stack
-    #=> 0
-    c.restore_all 			# Restore all tables if you have problems.
-    #=> nil
-    c.untrack 				# Stop tracking the database (but why?)
-```
