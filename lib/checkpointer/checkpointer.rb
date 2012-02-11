@@ -45,7 +45,7 @@ module Checkpointer
       raise ArgumentError.new("Manual checkpoints cannot be a number.") if is_number?(cp)
 
       # Backup all changed tables.
-      table_names = changed_tables_from(@db_name) << @tracker.tracking_table
+      table_names = @tracker.changed_tables_from(@db_name) << @tracker.tracking_table
       if cp.nil?
         @checkpoint_number += 1
         cp = @checkpoint_number
@@ -62,11 +62,11 @@ module Checkpointer
       checkpoint_tables=[]
       if cp != 0
         db_checkpoint = "#{@db_backup}_#{cp}"
-        checkpoint_tables = tables_from(db_checkpoint)
+        checkpoint_tables = @tracker.tables_from(db_checkpoint)
       end
 
       # Get all changed tables.
-      changed_tables = changed_tables_from(@db_name)
+      changed_tables = @tracker.changed_tables_from(@db_name)
       # puts "checkpoint tables: #{checkpoint_tables.inspect}"
       # puts "changed tables: #{changed_tables.inspect}"
       # puts "difference: #{(changed_tables - checkpoint_tables).inspect}"
@@ -74,14 +74,14 @@ module Checkpointer
       # Restore tables not in the checkpoint from backup
       db_copier = DatabaseCopier.from_connection(@db_adapter)
       db_copier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name) do |tbl, op|
-        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+        @tracker.add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
       
       # Restore tables from checkpoint.
       # This must come last because the tracking table must be restored last,
       # otherwise triggers will update the tracking table incorrectly.
       db_copier.copy_tables(checkpoint_tables, db_checkpoint, @db_name) do |tbl, op|
-        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+        @tracker.add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
 
       @checkpoint_number = cp if is_number?(cp)
@@ -147,11 +147,11 @@ module Checkpointer
     end
 
     def restore_all
-      tables = tables_from(@db_backup)
+      tables = @tracker.tables_from(@db_backup)
       db_copier = DatabaseCopier.from_connection(@db_adapter)
       db_copier.drop_tables_not_in_source(@db_backup, @db_name)
       db_copier.copy_tables(tables, @db_backup, @db_name) do |tbl, op|
-        add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
+        @tracker.add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
       # Ensure tracking table
       @tracker.create_tracking_table
@@ -161,22 +161,5 @@ module Checkpointer
     def is_number?(value)
       value.kind_of?(Fixnum) or (value.respond_to?(:to_i) and value.to_i.to_s == value)
     end
-
-    def tables_from(db)
-      @tracker.tables_from(db)
-    end
-
-    # Select table names from tracking table
-    def changed_tables_from(db)
-      @tracker.changed_tables_from(db)
-    end
-
-    # Add triggers to an individual table.
-    # db_name: unescaped database name
-    # table: unescaped table name
-    def add_triggers_to_table(db_name, table)
-      @tracker.add_triggers_to_table(db_name, table)
-    end
-
   end
 end

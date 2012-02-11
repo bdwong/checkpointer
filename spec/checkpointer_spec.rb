@@ -37,7 +37,7 @@ module Checkpointer
         and_return('BY RETURNING DIFFERENT VALUE')
       @connection.stub(:execute).with("DROP TABLE `#{todb}`.`#{table}`")
       @connection.stub(:execute).with("CREATE TABLE IF NOT EXISTS `#{todb}`.`#{table}` LIKE `#{fromdb}`.`#{table}`")
-      @c.should_receive(:add_triggers_to_table).with(todb, table)
+      Database::Tracker.any_instance.should_receive(:add_triggers_to_table).with(todb, table)
       @connection.stub(:execute).with("INSERT INTO `#{todb}`.`#{table}` SELECT * FROM `#{fromdb}`.`#{table}`")
     end
 
@@ -49,7 +49,7 @@ module Checkpointer
         with(fromdb, table).
         and_return('THIS TABLE SHOULD BE CREATED')
       @connection.stub(:execute).with("CREATE TABLE IF NOT EXISTS `#{todb}`.`#{table}` LIKE `#{fromdb}`.`#{table}`")
-      @c.should_receive(:add_triggers_to_table).with(todb, table)
+      Database::Tracker.any_instance.should_receive(:add_triggers_to_table).with(todb, table)
       @connection.stub(:execute).with("INSERT INTO `#{todb}`.`#{table}` SELECT * FROM `#{fromdb}`.`#{table}`")
     end
 
@@ -209,7 +209,7 @@ module Checkpointer
         it "should call add_triggers_to_table if table needs to create or drop_and_create" do
           @c.instance_variable_set(:@last_checkpoint, 2)
           @c.instance_variable_set(:@checkpoint_number, 2)
-          @connection.should_receive(:tables_from).with('database_backup_2').
+          Database::Tracker.any_instance.should_receive(:tables_from).with('database_backup_2').
             and_return(['table_1'])
 
           stub_copy_tables_boilerplate
@@ -230,7 +230,7 @@ module Checkpointer
 
         context "checkpoint does not exist" do
           it "should raise an error if checkpoint does not exist" do
-            @c.should_receive(:tables_from).with("database_backup_non_existent").
+            Database::Tracker.any_instance.should_receive(:tables_from).with("database_backup_non_existent").
               and_raise(::Checkpointer::Database::DatabaseNotFoundError.new)
             expect { @c.restore("non_existent") }.to raise_error(::Checkpointer::Database::DatabaseNotFoundError)
           end
@@ -247,7 +247,7 @@ module Checkpointer
         it "should restore the highest checkpoint and drop it" do
           @c.instance_variable_set(:@last_checkpoint, 2)
           @c.instance_variable_set(:@checkpoint_number, 4)
-          @connection.should_receive(:tables_from).with('database_backup_4').
+          Database::Tracker.any_instance.should_receive(:tables_from).with('database_backup_4').
             and_return(['table_1', 'updated_tables'])
           @connection.should_receive(:execute).with("SHOW DATABASES LIKE 'database\\_backup\\_%'").
             and_return(['database_backup_1', 'database_backup_2', 'database_backup_3', 'database_backup_4'])
@@ -349,8 +349,7 @@ module Checkpointer
 
       describe :restore_all do
         it "should restore database using DatabaseCopier" do
-          @connection.unstub(:execute)
-          @connection.stub(:tables_from).with('database_backup').and_return(['table_1', 'table_2'])
+          Database::Tracker.any_instance.should_receive(:tables_from).with('database_backup').and_return(['table_1', 'table_2'])
           DatabaseCopier.any_instance.should_receive(:drop_tables_not_in_source).
             with('database_backup', 'database')
           DatabaseCopier.any_instance.should_receive(:copy_tables).
@@ -361,7 +360,7 @@ module Checkpointer
         end
         
         it "should call add_triggers_to_table if table needs to create or drop_and_create" do
-          @connection.should_receive(:tables_from).with('database_backup').
+          Database::Tracker.any_instance.should_receive(:tables_from).with('database_backup').
             and_return(['table_1', 'table_2'])
 
           stub_copy_tables_boilerplate
@@ -391,27 +390,6 @@ module Checkpointer
         it "should return false for strings that contain both alpha and numeric digits" do
           @c.send(:is_number?, "123abc").should be_false
           @c.send(:is_number?, "abc123").should be_false
-        end
-      end
-
-      describe :tables_from do
-        it "should delegate to Tracker" do
-          Database::Tracker.any_instance.should_receive(:tables_from).with('database')
-          @c.send(:tables_from, 'database')
-        end
-      end
-
-      describe :changed_tables_from do
-        it "should delegate to Tracker" do
-          Database::Tracker.any_instance.should_receive(:changed_tables_from).with('database')
-          @c.send(:changed_tables_from, 'database')
-        end
-      end
-
-      describe :add_triggers_to_table do
-        it "should delegate to Tracker" do
-          Database::Tracker.any_instance.should_receive(:add_triggers_to_table).with('database', 'table_1')
-          @c.send(:add_triggers_to_table, 'database', 'table_1')
         end
       end
     end
