@@ -26,10 +26,6 @@ module Checkpointer
       @db_name
     end
 
-    def tracking_table
-      @tracker.tracking_table
-    end
-
     # Backup the database and create monitoring triggers
     def track
       @tracker.track
@@ -49,7 +45,7 @@ module Checkpointer
       raise ArgumentError.new("Manual checkpoints cannot be a number.") if is_number?(cp)
 
       # Backup all changed tables.
-      table_names = changed_tables_from(@db_name) << tracking_table
+      table_names = changed_tables_from(@db_name) << @tracker.tracking_table
       if cp.nil?
         @checkpoint_number += 1
         cp = @checkpoint_number
@@ -179,25 +175,11 @@ module Checkpointer
       @tracker.create_tracking_table
     end
 
-    def drop_tracking_table
-      @tracker.drop_tracking_table
-    end
-
-    # Add triggers to all tables except tracking table
-    def add_triggers
-      @tracker.add_triggers
-    end
-
     # Add triggers to an individual table.
     # db_name: unescaped database name
     # table: unescaped table name
     def add_triggers_to_table(db_name, table)
       @tracker.add_triggers_to_table(db_name, table)
-    end
-
-      # Remove triggers from all tables except tracking table
-    def remove_triggers
-      @tracker.remove_triggers
     end
 
   end
