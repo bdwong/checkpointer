@@ -1,9 +1,9 @@
 TOOD:
-- Discuss database setup and permissions in README
 - Create easy-access module for rails controllers
-- Refactor tracking code into its own class
-	- create log tracker
+- Detect if database is tracked and start tracking on instantiation.
+- Create log tracker
 - Cucumber tests on real databases
+- Create a refresh method to re-track tables that have become untracked because they were dropped and created.
 
 - Rescue unknown database when instantiating Checkpointer:
 Mysql2::Error: Unknown database 'database_backup_x'
