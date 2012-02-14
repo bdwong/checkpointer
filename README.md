@@ -14,7 +14,6 @@ Why Checkpointer?
 Features
 --------
 
-* Checkpoint across schema changes made with ALTER TABLE.
 * Tracking persists with multiple connections and sessions. This means that unlike transaction-based checkpoints, you can create another connection to see the current state of the database.
 * Works in the rails console with ActiveRecord or in the irb console with Mysql2.
 * Checkpoints on a stack or named checkpoints.
