@@ -67,6 +67,20 @@ c.restore 0     # restore to clean database for next scenario
 ```ruby
 # Starting from a newly tracked database...
 
+# Make changes to database
+
+c.checkpoint  # incremental checkpoint
+
+# Make more changes
+
+c.checkpoint  # incremental checkpoint
+
+# Make a mistake
+
+c.restore # restore last checkpoint
+
+# Make more changes...
+
 ```
 
 === Stop tracking the database
