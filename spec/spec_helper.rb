@@ -9,6 +9,8 @@ rescue LoadError
 end
 
 require 'rspec'
+require 'rspec/autorun' # For rcov to work properly
+
 require 'mysql2'
 require 'active_record'
 require File.dirname(__FILE__) + '/../lib/checkpointer'
