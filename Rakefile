@@ -20,9 +20,7 @@ end
 
 if coverage_type == :simplecov
   RSpec::Core::RakeTask.new(:simplecov) do |t|
-    SimpleCov.start do
-      add_filter "spec/"
-    end
+    ENV["COVERAGE"]="true"
   end
 end
 
