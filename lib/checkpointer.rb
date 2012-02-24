@@ -11,6 +11,7 @@ module Checkpointer
 
     def initialize(options={})
       @options = options.to_hash
+      extract_options(@options)
       adapter = autodetect_database_adapter
       #puts "Adapter found: #{adapter}"
       @db_adapter = adapter.new(options)
@@ -21,6 +22,44 @@ module Checkpointer
       raise ArgumentError.new("No database name specified or no database selected.") if @db_name.nil?
       @db_backup =  options[:backup] || "#{@db_name}_backup"
       @tracker = ::Checkpointer::Database::Tracker.new(@db_adapter, @db_name)
+    end
+
+    # Deletes recognized checkpointer options keys from the options hash
+    # and stores them in @cp_options
+    def extract_options(options)
+      @cp_options = {}
+      [:tables].each do |key|
+        value = options.delete(key)
+        @cp_options[key] = value unless value.nil?
+      end
+    end
+
+    # filter list of tables according to table_opts options.
+    def filtered_tables(tables, table_opts=nil)
+      table_opts ||= @cp_options[:tables]
+
+      # Understands the following forms:
+      # nil
+      # :tables => :all
+      # :tables => ['table1', 'table2', 'table3']
+      # :tables => {:only => ['table1']}
+      # :tables => {:only => 'table1'}
+      # :tables => {:except => ['table2', 'table3']}
+      case table_opts
+      when nil, :all
+        tables
+      when Array
+        table_opts & tables
+      when Hash
+        only = table_opts[:only]
+        only = [only].flatten unless only.nil?
+        except = table_opts[:except]
+        except = [except].flatten unless except.nil?
+        filtered = (only & tables) || tables.clone
+        filtered -= except || []
+      else
+        raise ArgumentError.new("Invalid :tables option '#{table_opts}'")
+      end
     end
 
     def sql_connection
@@ -63,7 +102,7 @@ module Checkpointer
     end
 
     # Checkpoint 0 is the base backup.
-    def restore(cp=@last_checkpoint)
+    def restore(cp=@last_checkpoint, table_opts=nil)
       checkpoint_tables=[]
       if cp != 0
         db_checkpoint = "#{@db_backup}_#{cp}"
@@ -78,14 +117,16 @@ module Checkpointer
 
       # Restore tables not in the checkpoint from backup
       db_copier = DatabaseCopier.from_connection(@db_adapter)
-      db_copier.copy_tables(changed_tables - checkpoint_tables, @db_backup, @db_name) do |tbl, op|
+      base_updates = filtered_tables(changed_tables - checkpoint_tables, table_opts)
+      db_copier.copy_tables(base_updates, @db_backup, @db_name) do |tbl, op|
         @tracker.add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
       
       # Restore tables from checkpoint.
       # This must come last because the tracking table must be restored last,
       # otherwise triggers will update the tracking table incorrectly.
-      db_copier.copy_tables(checkpoint_tables, db_checkpoint, @db_name) do |tbl, op|
+      checkpoint_updates = filtered_tables(checkpoint_tables, table_opts)
+      db_copier.copy_tables(checkpoint_updates, db_checkpoint, @db_name) do |tbl, op|
         @tracker.add_triggers_to_table(@db_name, tbl) if [:drop_and_create, :create].include?(op)
       end
 

@@ -63,6 +63,18 @@ module Checkpointer
         c = Checkpointer.new
         c.should be_kind_of(Checkpointer)
       end
+
+      describe :extract_options do
+        it "should delete :tables from @options" do
+          c = Checkpointer.new({:database => 'db', :tables => :options})
+          c.instance_variable_get(:@options).should == {:database => 'db'}
+        end
+
+        it "should add :tables to @cp_options" do
+          c = Checkpointer.new({:database => 'db', :tables => :options})
+          c.instance_variable_get(:@cp_options).should == {:tables => :options}
+        end
+      end      
     end
 
     context "instantiated with dummy connection" do
@@ -79,6 +91,41 @@ module Checkpointer
         # @connection.unstub(:execute)
         @connection.stub(:execute) do |value|
           raise "Unexpected query string: \"#{value}\""
+        end
+      end
+
+      describe :filtered_tables do
+        it "should use @cp_options[:tables] if table_opts is nil" do
+          @c.instance_variable_set(:@cp_options, { :tables => ['table_2']} )
+          @c.filtered_tables(['table_1', 'table_2']).should == ['table_2']
+        end
+
+        it "should return all tables if @cp_options and table_opts are nil" do
+          @c.filtered_tables(['table_1', 'table_2']).should == ['table_1', 'table_2']
+        end
+
+        it "should return all tables if table_opts is :all" do
+          @c.filtered_tables(['table_1', 'table_2'], :all).should == ['table_1', 'table_2']
+        end
+
+        it "should return array minus nonexistent tables if table_opts is an array" do
+          @c.filtered_tables(['table_1', 'table_2'], ['table_1', 'table_3']).should == ['table_1']
+        end
+
+        it "should return array minus nonexistent tables if table_opts has :only" do
+          @c.filtered_tables(['table_1', 'table_2'], {:only => ['table_1', 'table_3']}).should == ['table_1']
+        end
+
+        it "should return tables minus exceptions if table_opts has :except" do
+          @c.filtered_tables(['table_1', 'table_2'], {:except => ['table_1', 'table_3']}).should == ['table_2']
+        end
+
+        it "should combine :only and :except" do
+          @c.filtered_tables(['table_1', 'table_2', 'table_3'], {:only => ['table_1', 'table_3'], :except => 'table_1'}).should == ['table_3']
+        end
+
+        it "should raise ArgumentError if passed an unknown argument type" do
+          expect { @c.filtered_tables([], "invalid") }.to raise_error(ArgumentError)
         end
       end
 
@@ -217,6 +264,22 @@ module Checkpointer
           stub_copy_table_needs_creating('database_backup_2', 'database', 'table_1')
 
           @c.restore.should == 2
+        end
+
+        it "should restore with table options" do
+          DatabaseCopier.any_instance.should_receive(:copy_tables).
+            with(['table_1', 'table_2'], 'database_backup', 'database')
+          DatabaseCopier.any_instance.should_receive(:copy_tables).
+            with([], nil, 'database')
+
+          @c.should_receive(:filtered_tables).
+            with([], {:except => 'table_3'}).
+            and_return([])
+
+          @c.should_receive(:filtered_tables).
+            with(['table_1', 'table_2'], {:except => 'table_3'}).
+            and_return(['table_1', 'table_2'])
+          @c.restore(0, :except => 'table_3').should == 0
         end
 
         context "no backup database" do
