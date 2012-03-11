@@ -59,6 +59,11 @@ module ::Checkpointer::Database
           expect { @c.execute("SELECT 1") }.to raise_error(::Checkpointer::Database::DuplicateTriggerError, "Unhandled duplicate trigger")
         end
 
+        it 'should raise DatabaseNotFoundError when database does not exist' do
+          Mysql2::Client.any_instance.should_receive(:query).and_raise(Mysql2::Error.new("Unknown database"))
+          expect { @c.execute("USE nonexistent") }.to raise_error(::Checkpointer::Database::DatabaseNotFoundError, "Database not found")
+        end
+
         it 'should re-raise other errors' do
           Mysql2::Client.any_instance.should_receive(:query).and_raise(Mysql2::Error.new("Some non-trigger error"))
           expect { @c.execute("SELECT 1") }.to raise_error(Mysql2::Error, "Some non-trigger error")

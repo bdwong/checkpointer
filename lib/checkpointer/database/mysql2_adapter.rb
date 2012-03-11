@@ -32,8 +32,14 @@ module Checkpointer
         begin
           @connection.query(query)
         rescue Mysql2::Error => e
-          raise unless e.message =~ /multiple triggers/
-          raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+          case
+          when e.message =~ /multiple triggers/
+            raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+          when e.message =~ /^Unknown database/
+            raise ::Checkpointer::Database::DatabaseNotFoundError.new('Database not found')
+          else
+            raise
+          end
         end
       end
 

@@ -49,8 +49,14 @@ module Checkpointer
         begin
           connection.execute(query)
         rescue ::ActiveRecord::StatementInvalid => e
-          raise unless e.message =~ /multiple triggers/
-          raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+          case
+          when e.message =~ /multiple triggers/
+            raise ::Checkpointer::Database::DuplicateTriggerError.new('Unhandled duplicate trigger')
+          when e.message =~ /^Mysql2::Error: Unknown database/
+            raise ::Checkpointer::Database::DatabaseNotFoundError.new('Database not found')
+          else
+            raise
+          end
         end
       end
 

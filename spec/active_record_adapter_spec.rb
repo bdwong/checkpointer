@@ -121,6 +121,11 @@ module ::Checkpointer::Database
           expect { @c.execute("SELECT 1") }.to raise_error(::Checkpointer::Database::DuplicateTriggerError, "Unhandled duplicate trigger")
         end
 
+        it 'should raise DatabaseNotFoundError when database does not exist' do
+          @connection.should_receive(:execute).and_raise(ActiveRecord::StatementInvalid.new("Mysql2::Error: Unknown database 'nonexistent'"))
+          expect { @c.execute("USE nonexistent") }.to raise_error(::Checkpointer::Database::DatabaseNotFoundError, "Database not found")
+        end
+
         it 'should re-raise other errors' do
           @connection.should_receive(:execute).and_raise(ActiveRecord::StatementInvalid.new("Some non-trigger error"))
           expect { @c.execute("SELECT 1") }.to raise_error(ActiveRecord::StatementInvalid, "Some non-trigger error")
